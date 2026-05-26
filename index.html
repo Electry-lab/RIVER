@@ -341,6 +341,70 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
 </div>
 
 </div><!-- /app -->
+<!-- チュートリアルモーダル -->
+<div id="tutorial-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;overflow-y:auto;">
+  <div style="max-width:420px;margin:0 auto;padding:20px;">
+    <div style="background:#111;border-radius:16px;padding:20px;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:11px;letter-spacing:3px;color:#555;margin-bottom:6px;">BAR <span style="color:#ff6b2b;">RIVER</span></div>
+        <div style="font-size:17px;font-weight:600;color:#fff;">はじめての方へ</div>
+      </div>
+
+      <!-- STEP 1 -->
+      <div style="background:#1a1a1a;border-radius:12px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="background:#ff6b2b;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;">1</div>
+          <div style="font-size:14px;font-weight:500;color:#fff;">自分の名前を選ぶ</div>
+        </div>
+        <div style="font-size:12px;color:#666;line-height:1.7;padding-left:34px;">
+          最初の画面で自分の名前をタップしてください。<br>
+          ない場合は「新しいスタッフ」から追加できます。
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div style="background:#1a1a1a;border-radius:12px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="background:#ff6b2b;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;">2</div>
+          <div style="font-size:14px;font-weight:500;color:#fff;">グループを作る</div>
+        </div>
+        <div style="font-size:12px;color:#666;line-height:1.7;padding-left:34px;">
+          「＋ 新しいグループを追加」からお客様のグループを作ります。<br>
+          お客様名・人数・指名スタッフを入力してください。
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div style="background:#1a1a1a;border-radius:12px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="background:#ff6b2b;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;">3</div>
+          <div style="font-size:14px;font-weight:500;color:#fff;">注文を入れる</div>
+        </div>
+        <div style="font-size:12px;color:#666;line-height:1.7;padding-left:34px;">
+          グループをタップ → 誰のドリンクか選ぶ（お客様／自分／他スタッフ）→ メニューから選んで「＋」を押す。<br>
+          最後に「注文を追加する」で確定です。
+        </div>
+      </div>
+
+      <!-- STEP 4 -->
+      <div style="background:#1a1a1a;border-radius:12px;padding:14px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="background:#ff6b2b;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;">4</div>
+          <div style="font-size:14px;font-weight:500;color:#fff;">会計する</div>
+        </div>
+        <div style="font-size:12px;color:#666;line-height:1.7;padding-left:34px;">
+          グループカードの「会計 →」をタップ。<br>
+          注文内容を確認して「会計を締める」→ 現金／カードを選択。
+        </div>
+      </div>
+
+      <button onclick="closeTutorial()" style="background:#ff6b2b;border:none;border-radius:12px;width:100%;padding:14px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;">わかった！はじめる →</button>
+      <button onclick="closeTutorial()" style="background:transparent;border:none;color:#444;font-size:11px;width:100%;padding:10px;cursor:pointer;">次回から表示しない</button>
+    </div>
+  </div>
+</div>
+
+
 
 <!-- 支払いモーダル -->
 <div class="pay-modal" id="pay-modal">
@@ -852,8 +916,21 @@ function closeGroup(method){
   setTimeout(()=>goTo('sc-groups'),600);
 }
 
+/* ---- Tutorial ---- */
+function showTutorial(){
+  document.getElementById('tutorial-modal').style.display='block';
+}
+function closeTutorial(){
+  document.getElementById('tutorial-modal').style.display='none';
+  localStorage.setItem('river_tutorial_done','1');
+}
+
 /* ---- Init ---- */
 loadData();
+// チュートリアル（初回のみ）
+if(!localStorage.getItem('river_tutorial_done')){
+  showTutorial();
+}
 // 起動時：進行中のセッションがあればスタッフ選択へ
 if(curSessionId){
   const session=sessions.find(s=>s.id===curSessionId);
