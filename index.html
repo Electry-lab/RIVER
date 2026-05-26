@@ -7,12 +7,12 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:#050505;min-height:100vh;display:flex;justify-content:center;padding:20px;}
-.app{background:#0a0a0a;width:100%;max-width:420px;min-height:100vh;border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#fff;}
+.app{background:#0a0a0a;width:100%;max-width:420px;min-height:100vh;border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#fff;padding-right:2px;}
 .header{background:#111;border-bottom:1px solid #222;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
 .logo{font-size:12px;letter-spacing:3px;font-weight:500;}
 .logo span{color:#ff6b2b;}
 .hinfo{font-size:11px;color:#555;}
-.screen{display:none;padding:16px;}
+.screen{display:none;padding:16px 18px 16px 16px;overflow-x:hidden;}
 .screen.active{display:block;}
 .stitle{font-size:10px;letter-spacing:2px;color:#555;margin-bottom:14px;}
 
@@ -80,9 +80,9 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
 
 /* 注文入力 */
 .who-sel{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;}
-.wbtn{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:10px 6px;text-align:center;cursor:pointer;font-size:12px;color:#888;}
+.wbtn{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:14px 6px;text-align:center;cursor:pointer;font-size:13px;color:#888;}
 .wbtn.active{background:#1f1200;border-color:#ff6b2b;color:#ff6b2b;}
-.cat-tabs{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;}
+.cat-tabs{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding:2px 2px 4px 2px;}
 .ctab{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:20px;padding:5px 12px;font-size:11px;color:#666;cursor:pointer;white-space:nowrap;flex-shrink:0;}
 .ctab.active{background:#ff6b2b;border-color:#ff6b2b;color:#fff;}
 .mlist{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;}
@@ -99,7 +99,7 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
 .otax{display:flex;justify-content:space-between;font-size:11px;color:#ff6b2b;padding-top:4px;}
 .sendbtn{background:#ff6b2b;border:none;border-radius:12px;width:100%;padding:13px;color:#fff;font-size:14px;font-weight:500;margin-top:12px;cursor:pointer;}
 .backbtn{background:transparent;border:1px solid #2a2a2a;border-radius:8px;padding:6px 12px;color:#555;font-size:11px;cursor:pointer;}
-.ibar{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:8px 12px;display:flex;justify-content:space-between;margin-bottom:12px;}
+.ibar{background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;margin-bottom:16px;}
 .ibar span{font-size:11px;color:#555;}
 .ibar strong{color:#ff6b2b;font-size:12px;}
 .tag{display:inline-block;background:#1f1200;border:1px solid #ff6b2b44;border-radius:20px;padding:2px 8px;font-size:10px;color:#ff6b2b;margin:2px;}
@@ -171,7 +171,8 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
 <div class="header">
   <div class="logo">BAR <span>RIVER</span></div>
   <div style="display:flex;align-items:center;gap:8px;">
-    <div class="hinfo" id="hinfo" onclick="tryLogout()" style="cursor:pointer;padding:4px 8px;border-radius:6px;" title="タップでスタッフ変更"></div>
+    <span id="hinfo" style="color:#ff6b2b;font-size:12px;font-weight:500;display:none;"></span>
+    <button id="logout-btn" onclick="goTo('sc-staff');curStaff='';curOrders=[];" style="display:none;background:transparent;border:none;color:#fff;font-size:11px;cursor:pointer;padding:4px 6px;">変更</button>
     <button class="header-close-btn" id="header-close-btn" style="display:none;" onclick="openCloseModal()">閉店</button>
   </div>
 </div>
@@ -217,8 +218,7 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
 
 <!-- グループ一覧 -->
 <div class="screen" id="sc-groups">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-    <button class="backbtn" onclick="goTo('sc-staff')">← 戻る</button>
+  <div style="margin-bottom:14px;">
     <div class="stitle" style="margin:0;">お客様グループ</div>
   </div>
   <div class="group-tabs">
@@ -251,7 +251,7 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
     <span>税込 <strong id="o-cur">¥0</strong></span>
   </div>
   <div style="margin-bottom:10px;">
-    <div style="font-size:10px;letter-spacing:1px;color:#555;margin-bottom:6px;">指名スタッフ <span class="edit-shimei" onclick="toggleShimeiEdit()">＋ 場内指名を追加</span></div>
+    <div style="font-size:10px;letter-spacing:1px;color:#555;margin-bottom:8px;margin-top:4px;">指名スタッフ <span class="edit-shimei" onclick="toggleShimeiEdit()">＋ 場内指名を追加</span></div>
     <div id="shimei-display"></div>
     <div id="shimei-edit-area" style="display:none;margin-top:8px;">
       <div class="mini-staff" id="shimei-edit-list"></div>
@@ -264,9 +264,9 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
     <div class="wbtn" id="w-self" onclick="setWho('self')">自分</div>
     <div class="wbtn" id="w-other" onclick="setWho('other')">他スタッフ</div>
   </div>
-  <div id="other-staff-sel" style="display:none;margin-bottom:10px;">
-    <div style="font-size:10px;color:#555;margin-bottom:6px;">スタッフを選択</div>
-    <div class="mini-staff" id="other-staff-list"></div>
+  <div id="other-staff-sel" style="display:none;margin-bottom:10px;padding:0 2px;">
+    <div style="font-size:10px;color:#555;margin-bottom:8px;">スタッフを選択</div>
+    <div class="mini-staff" id="other-staff-list" style="flex-wrap:wrap;"></div>
   </div>
   <div class="cat-tabs" id="cat-tabs"></div>
   <div class="mlist" id="mlist"></div>
@@ -369,13 +369,14 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
 <script>
 const STAFF=['なおと','りん','りょうせい','そうたろう','あやと','ゆうせい','としき','かなた','けんしろう','いっこう'];
 const CAN_EDIT=['りいや','なおと','りん']; // 修正権限あり
+const CAN_CLOSE=['りいや','なおと','りん']; // 閉店権限あり
 const DAYS=['日','月','火','水','木','金','土'];
 const MENUS={
-  shochu:[{n:'鏡月',p:3000},{n:'チャミスル',p:3000},{n:'TAKUMA',p:3000},{n:'プレミアム鏡月',p:4000},{n:'黒桐島',p:4000},{n:'吉四六',p:5500}],
-  whiskey:[{n:'角',p:4000},{n:'ジャックダニエル',p:6000},{n:'シーバスミズナラ',p:9500},{n:'響ブレンダーズ',p:30000},{n:'山崎（時価）',p:0},{n:'山崎12年（時価）',p:0}],
-  champagne:[{n:'オリジナル',p:15000},{n:'モエ白',p:12000},{n:'モエロゼ',p:18000},{n:'モエネクター',p:22000},{n:'モエアイス',p:22000},{n:'ドンペリ白',p:80000},{n:'ドンペリロゼ',p:120000},{n:'アルマンドゴールド',p:140000},{n:'アルマンドロゼ',p:180000},{n:'ソウメイ',p:70000}],
-  shot:[{n:'テキーラ クエルボ',p:500},{n:'アネホ1800',p:10000},{n:'コカボム',p:1000},{n:'クライナー',p:700}],
-  other:[{n:'ミネラルウォーター',p:700},{n:'割りもの',p:700},{n:'お菓子',p:0},{n:'ダーツ',p:0},{n:'飲み放題',p:3000},{n:'チャージ',p:1500}]
+  system:[{n:'チャージ',p:1500},{n:'飲み放題',p:3000},{n:'お菓子',p:0},{n:'ダーツ',p:0}],
+  glass:[{n:'割りもの',p:700},{n:'グラス',p:700}],
+  shot:[{n:'テキーラ クエルボ',p:500},{n:'クライナー',p:700},{n:'コカボム',p:1000},{n:'アネホ1800',p:10000}],
+  champagne:[{n:'ヴーヴイエロー',p:20000},{n:'モエ白',p:12000},{n:'モエロゼ',p:18000},{n:'モエネクター',p:22000},{n:'モエアイス',p:22000},{n:'ドンペリ白',p:80000},{n:'ドンペリロゼ',p:120000},{n:'アルマンドゴールド',p:140000},{n:'アルマンドロゼ',p:180000},{n:'ソウメイ',p:70000}],
+  bottle:[{n:'鏡月',p:3000},{n:'チャミスル',p:3000},{n:'TAKUMA',p:3000},{n:'プレミアム鏡月',p:4000},{n:'黒桐島',p:4000},{n:'吉四六',p:5500},{n:'角',p:4000},{n:'ジャックダニエル',p:6000},{n:'シーバスミズナラ',p:9500},{n:'響ブレンダーズ',p:30000},{n:'山崎（時価）',p:0},{n:'山崎12年（時価）',p:0}]
 };
 
 let curStaff='',groups=[],sessions=[],curGroupId=null,curOrders=[],curWho='guest',curOtherStaff='',curTab='active',curSessionId=null;
@@ -427,7 +428,8 @@ function startSession(){
   saveData();
   // セッション日付バッジ更新
   document.getElementById('session-date-badge').textContent=fmtDateJP(now);
-  document.getElementById('header-close-btn').style.display='block';
+  // 閉店ボタンは権限あるスタッフがログインしたときのみ表示
+  document.getElementById('header-close-btn').style.display='none';
   goTo('sc-staff');
 }
 
@@ -485,7 +487,8 @@ function confirmClose(){
   saveData();
   curSessionId=null;
   curStaff='';
-  document.getElementById('hinfo').textContent='';
+  document.getElementById('hinfo').style.display='none';
+  document.getElementById('logout-btn').style.display='none';
   document.getElementById('header-close-btn').style.display='none';
   goTo('sc-closed');
 }
@@ -496,7 +499,8 @@ function tryLogout(){
   if(confirm(curStaff+'さん、スタッフ選択に戻りますか？\n（入力中の注文は破棄されます）')){
     curStaff='';
     curOrders=[];
-    document.getElementById('hinfo').textContent='';
+    document.getElementById('hinfo').style.display='none';
+    document.getElementById('logout-btn').style.display='none';
     document.getElementById('w-self').textContent='自分';
     goTo('sc-staff');
   }
@@ -520,6 +524,8 @@ function switchTab(tab){
 function selStaff(name){
   curStaff=name;
   document.getElementById('hinfo').textContent=name;
+  document.getElementById('hinfo').style.display='inline';
+  document.getElementById('logout-btn').style.display='inline';
   document.getElementById('w-self').textContent='自分（'+name+'）';
   curTab='active';
   document.getElementById('gtab-active').classList.add('active');
@@ -530,6 +536,7 @@ function selStaff(name){
   const all=STAFF.includes(name)?STAFF:[...STAFF,name];
   document.getElementById('shimei-sel').innerHTML=all.map(s=>`<div class="msbtn" onclick="this.classList.toggle('sel')">${s}</div>`).join('');
   document.getElementById('other-staff-list').innerHTML=all.filter(s=>s!==name).map(s=>`<div class="msbtn" onclick="selOther(this,'${s}')">${s}</div>`).join('');
+  document.getElementById('header-close-btn').style.display=CAN_CLOSE.includes(name)?'block':'none';
 }
 
 /* ---- Groups ---- */
@@ -593,7 +600,14 @@ function createGroup(){
 }
 
 function openGroup(id){
-  curGroupId=id;curOrders=[];
+  curGroupId=id;
+  curOrders=[];
+  // サマリーをリセット
+  document.getElementById('orows').innerHTML='<span style="color:#444;font-size:12px;">まだ注文なし</span>';
+  document.getElementById('ototaldiv').style.display='none';
+  document.getElementById('otaxdiv').style.display='none';
+  document.getElementById('shimei-edit-area').style.display='none';
+  document.getElementById('custom-input-area').style.display='none';
   const g=groups.find(x=>x.id===id);
   document.getElementById('o-staff').textContent=curStaff;
   document.getElementById('o-group').textContent=g.name;
@@ -628,10 +642,10 @@ function setWho(w){
   if(w!=='other')curOtherStaff='';
   const tabs=document.getElementById('cat-tabs');
   if(w==='guest'){
-    tabs.innerHTML=`<div class="ctab active" onclick="showCat(this,'shochu')">焼酎</div><div class="ctab" onclick="showCat(this,'whiskey')">ウイスキー</div><div class="ctab" onclick="showCat(this,'champagne')">シャンパン</div><div class="ctab" onclick="showCat(this,'shot')">ショット</div><div class="ctab" onclick="showCat(this,'other')">その他</div>`;
-    showCat(tabs.querySelector('.ctab'),'shochu');
+    tabs.innerHTML=`<div class="ctab active" onclick="showCat(this,'system')">システム</div><div class="ctab" onclick="showCat(this,'glass')">グラス</div><div class="ctab" onclick="showCat(this,'shot')">ショット</div><div class="ctab" onclick="showCat(this,'champagne')">シャンパン</div><div class="ctab" onclick="showCat(this,'bottle')">ボトル</div>`;
+    showCat(tabs.querySelector('.ctab'),'system');
   } else {
-    tabs.innerHTML=`<div class="ctab active" onclick="showCat(this,'shot')">ショット</div><div class="ctab" onclick="showCat(this,'champagne')">シャンパン</div><div class="ctab" onclick="showCat(this,'other')">その他</div>`;
+    tabs.innerHTML=`<div class="ctab active" onclick="showCat(this,'shot')">ショット</div><div class="ctab" onclick="showCat(this,'champagne')">シャンパン</div><div class="ctab" onclick="showCat(this,'system')">その他</div>`;
     showCat(tabs.querySelector('.ctab'),'shot');
   }
 }
@@ -640,9 +654,9 @@ function selOther(el,name){document.querySelectorAll('#other-staff-list .msbtn')
 function showCat(el,cat){
   document.querySelectorAll('#cat-tabs .ctab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('custom-input-area').style.display=cat==='other'?'block':'none';
+  document.getElementById('custom-input-area').style.display=cat==='system'?'block':'none';
   // スタッフ側のその他タブは自由入力のみ（固定メニューなし）
-  if(cat==='other'&&curWho!=='guest'){
+  if(cat==='system'&&curWho!=='guest'){
     document.getElementById('mlist').innerHTML='';
     return;
   }
@@ -838,7 +852,7 @@ if(curSessionId){
   if(session&&!session.closedAt){
     const d=new Date(session.startedAt);
     document.getElementById('session-date-badge').textContent=fmtDateJP(d);
-    document.getElementById('header-close-btn').style.display='block';
+    document.getElementById('header-close-btn').style.display='none'; // ログイン後にselStaffで権限チェック
     goTo('sc-staff');
   } else {
     curSessionId=null;
