@@ -126,7 +126,7 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
 
 </div>
 
-<script>
+<script type="module">
 const DAYS=['日','月','火','水','木','金','土'];
 function fmtDate(d){return`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;}
 function fmtDateJP(d){return`${d.getMonth()+1}月${d.getDate()}日（${DAYS[d.getDay()]}）`;}
@@ -196,7 +196,7 @@ async function switchTab(tab){
   renderTab();
 }
 
-function renderTab(){
+async function renderTab(){
   const el=document.getElementById('tab-content');
   if(curTab==='today'){
     const sg=curSessionId?groups.filter(g=>g.sessionId===curSessionId):[];
