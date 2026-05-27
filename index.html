@@ -447,23 +447,62 @@ const MENUS={
 
 let curStaff='',groups=[],sessions=[],curGroupId=null,curOrders=[],curWho='guest',curOtherStaff='',curTab='active',curSessionId=null;
 
-/* ---- localStorage ---- */
-function saveData(){
-  try{
-    localStorage.setItem('river_groups',JSON.stringify(groups));
-    localStorage.setItem('river_sessions',JSON.stringify(sessions));
-    localStorage.setItem('river_cur_session',curSessionId||'');
-  }catch(e){}
+/* ---- Supabase設定 ---- */
+const SUPABASE_URL='https://haqenuqasavvgzyvufuv.supabase.co';
+const SUPABASE_KEY='sb_publishable_SwJYz-lUWQw23jLGdK1GpA_61gn0L1y';
+
+async function sbFetch(path, method='GET', body=null){
+  const opts={method,headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'}};
+  if(body)opts.body=JSON.stringify(body);
+  const res=await fetch(SUPABASE_URL+'/rest/v1/'+path,opts);
+  if(!res.ok){const e=await res.text();console.error('SB Error:',e);return null;}
+  const text=await res.text();
+  return text?JSON.parse(text):null;
 }
-function loadData(){
+
+/* ---- DB操作 ---- */
+async function saveSession(session){
+  await sbFetch('sessions?on_conflict=id','POST',{id:session.id,started_at:session.startedAt,closed_at:session.closedAt,date_label:session.dateLabel});
+}
+
+async function saveGroup(g){
+  const data={id:g.id,session_id:g.sessionId,name:g.name,pax:g.pax,shimei:g.shimei,closed:g.closed,closed_at:g.closedAt||null,pay_method:g.payMethod||null,delete_logs:g.deleteLogs||[]};
+  await sbFetch('groups?on_conflict=id','POST',data);
+}
+
+async function saveOrders(groupId, orders){
+  // 既存注文を削除して全件インサート
+  await sbFetch('orders?group_id=eq.'+groupId,'DELETE');
+  if(!orders.length)return;
+  const rows=orders.map(o=>({group_id:groupId,name:o.name,price:o.price,qty:o.qty,who:o.who,staff:o.staff||'',custom:o.custom||false,ts:o.ts||new Date().toISOString()}));
+  await sbFetch('orders','POST',rows);
+}
+
+async function loadData(){
   try{
-    const g=localStorage.getItem('river_groups');
-    const s=localStorage.getItem('river_sessions');
+    // セッションIDをlocalStorageから取得
     const cs=localStorage.getItem('river_cur_session');
-    if(g)groups=JSON.parse(g);
-    if(s)sessions=JSON.parse(s);
-    if(cs&&cs!=='')curSessionId=cs;
-  }catch(e){groups=[];sessions=[];}
+    if(cs)curSessionId=cs;
+
+    // セッション一覧を取得
+    const sData=await sbFetch('sessions?order=started_at.asc');
+    if(sData)sessions=sData.map(s=>({id:s.id,startedAt:s.started_at,closedAt:s.closed_at,dateLabel:s.date_label}));
+
+    // グループと注文を取得
+    const gData=await sbFetch('groups?order=id.asc&select=*,orders(*)');
+    if(gData){
+      groups=gData.map(g=>({
+        id:g.id,sessionId:g.session_id,name:g.name,pax:g.pax,
+        shimei:g.shimei||[],closed:g.closed,closedAt:g.closed_at,
+        payMethod:g.pay_method,deleteLogs:g.delete_logs||[],
+        orders:(g.orders||[]).map(o=>({name:o.name,price:o.price,qty:o.qty,who:o.who,staff:o.staff,custom:o.custom,ts:o.ts}))
+      }));
+    }
+  }catch(e){console.error('loadData error:',e);}
+}
+
+function saveLocalSession(){
+  localStorage.setItem('river_cur_session',curSessionId||'');
 }
 
 /* ---- 日付フォーマット ---- */
@@ -485,16 +524,14 @@ function initOpenScreen(){
   }
 }
 
-function startSession(){
+async function startSession(){
   const now=new Date();
   curSessionId='session_'+now.getTime();
   const session={id:curSessionId,startedAt:now.toISOString(),closedAt:null,dateLabel:fmtDate(now)};
   sessions.push(session);
-  // このセッションのグループを初期化（セッションIDで紐づけ）
-  saveData();
-  // セッション日付バッジ更新
+  saveLocalSession();
+  await saveSession(session);
   document.getElementById('session-date-badge').textContent=fmtDateJP(now);
-  // 閉店ボタンは権限あるスタッフがログインしたときのみ表示
   document.getElementById('header-close-btn').style.display='none';
   goTo('sc-staff');
 }
@@ -522,11 +559,14 @@ function openCloseModal(){
   document.getElementById('close-modal').classList.add('show');
 }
 
-function confirmClose(){
+async function confirmClose(){
   document.getElementById('close-modal').classList.remove('show');
   const now=new Date();
   const session=sessions.find(s=>s.id===curSessionId);
-  if(session)session.closedAt=now.toISOString();
+  if(session){
+    session.closedAt=now.toISOString();
+    await saveSession(session);
+  }
 
   // 閉店画面の集計
   const sessionGroups=groups.filter(g=>g.sessionId===curSessionId);
@@ -550,7 +590,6 @@ function confirmClose(){
     <div class="close-sheet-row big"><span>売上合計（税込）</span><span>¥${Math.round(totalSales*1.1).toLocaleString()}</span></div>
   `;
 
-  saveData();
   curSessionId=null;
   curStaff='';
   document.getElementById('hinfo').style.display='none';
@@ -652,17 +691,18 @@ function renderGroups(){
 
 function toggleAddGroup(){const f=document.getElementById('addgroup-form');f.style.display=f.style.display==='none'?'block':'none';}
 
-function createGroup(){
+async function createGroup(){
   const name=document.getElementById('gname-in').value.trim()||'新規';
   const pax=parseInt(document.getElementById('gpax-in').value)||1;
   const shimei=[...document.querySelectorAll('#shimei-sel .msbtn.sel')].map(el=>el.textContent);
-  groups.push({id:Date.now(),name,pax,shimei,orders:[],closed:false,sessionId:curSessionId});
+  const g={id:Date.now(),name,pax,shimei,orders:[],closed:false,sessionId:curSessionId,deleteLogs:[]};
+  groups.push(g);
   document.getElementById('gname-in').value='';
   document.getElementById('gpax-in').value='';
   document.querySelectorAll('#shimei-sel .msbtn').forEach(el=>el.classList.remove('sel'));
   document.getElementById('addgroup-form').style.display='none';
   renderGroups();
-  saveData();
+  await saveGroup(g);
 }
 
 function openGroup(id){
@@ -690,13 +730,13 @@ function renderShimeiDisplay(g){
   el.innerHTML=g.shimei.length?g.shimei.map(s=>`<span class="tag">${s}</span>`).join(''):'<span style="color:#444;font-size:12px;">指名なし</span>';
 }
 function toggleShimeiEdit(){const a=document.getElementById('shimei-edit-area');a.style.display=a.style.display==='none'?'block':'none';}
-function saveShimei(){
+async function saveShimei(){
   const g=groups.find(x=>x.id===curGroupId);
   g.shimei=[...document.querySelectorAll('#shimei-edit-list .msbtn.sel')].map(el=>el.textContent);
   renderShimeiDisplay(g);
   document.getElementById('shimei-edit-area').style.display='none';
   renderGroups();
-  saveData();
+  await saveGroup(g);
 }
 
 /* ---- Order ---- */
@@ -751,13 +791,13 @@ function addCustomItem(){
   renderSummary();
 }
 
-function sendAndKaikei(){
+async function sendAndKaikei(){
   if(curOrders.length>0){
     const g=groups.find(x=>x.id===curGroupId);
     curOrders.forEach(o=>g.orders.push({...o,ts:new Date().toISOString()}));
     renderGroups();
-    saveData();
     curOrders=[];
+    await saveOrders(g.id,g.orders);
   }
   openKaikei(curGroupId);
 }
@@ -804,14 +844,14 @@ function updateCurTotal(){
   document.getElementById('o-cur').textContent='¥'+Math.round(sub*1.1).toLocaleString();
 }
 
-function sendOrder(){
+async function sendOrder(){
   if(!curOrders.length)return;
   const g=groups.find(x=>x.id===curGroupId);
   curOrders.forEach(o=>g.orders.push({...o,ts:new Date().toISOString()}));
   document.getElementById('done-info').textContent=curStaff+' → '+g.name;
   renderGroups();
-  saveData();
   curOrders=[];
+  await saveOrders(g.id,g.orders);
   goTo('sc-done');
 }
 
@@ -895,19 +935,20 @@ function deleteOrderItem(groupId, name, label){
     }
   }
   if(!found)return;
-  saveData();
   renderGroups();
-  openKaikei(groupId); // 画面を更新
+  await saveGroup(g);
+  await saveOrders(g.id,g.orders);
+  openKaikei(groupId);
 }
 
-function closeGroup(method){
+async function closeGroup(method){
   closePayModal();
   const g=groups.find(x=>x.id===curGroupId);
   g.closed=true;
   g.closedAt=new Date().toISOString();
   g.payMethod=method;
-  saveData();
   renderGroups();
+  await saveGroup(g);
   document.getElementById('k-close-btn').style.display='none';
   const payLabel=method==='cash'?'💴 現金':'💳 カード';
   const closedMsg=document.getElementById('k-closed-msg');
@@ -926,26 +967,31 @@ function closeTutorial(){
 }
 
 /* ---- Init ---- */
-loadData();
-// チュートリアル（初回のみ）
-if(!localStorage.getItem('river_tutorial_done')){
-  showTutorial();
-}
-// 起動時：進行中のセッションがあればスタッフ選択へ
-if(curSessionId){
-  const session=sessions.find(s=>s.id===curSessionId);
-  if(session&&!session.closedAt){
-    const d=new Date(session.startedAt);
-    document.getElementById('session-date-badge').textContent=fmtDateJP(d);
-    document.getElementById('header-close-btn').style.display='none'; // ログイン後にselStaffで権限チェック
-    goTo('sc-staff');
+async function init(){
+  // ローディング表示
+  document.getElementById('sc-open').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:80vh;color:#555;font-size:13px;">読み込み中...</div>';
+  await loadData();
+  // チュートリアル（初回のみ）
+  if(!localStorage.getItem('river_tutorial_done')){
+    showTutorial();
+  }
+  // 起動時：進行中のセッションがあればスタッフ選択へ
+  if(curSessionId){
+    const session=sessions.find(s=>s.id===curSessionId);
+    if(session&&!session.closedAt){
+      const d=new Date(session.startedAt);
+      document.getElementById('session-date-badge').textContent=fmtDateJP(d);
+      document.getElementById('header-close-btn').style.display='none';
+      goTo('sc-staff');
+    } else {
+      curSessionId=null;
+      initOpenScreen();
+    }
   } else {
-    curSessionId=null;
     initOpenScreen();
   }
-} else {
-  initOpenScreen();
 }
+init();
 </script>
 </body>
 </html>
