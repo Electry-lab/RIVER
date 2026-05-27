@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAR RIVER オーナー</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#050505;min-height:100vh;display:flex;justify-content:center;padding:20px;}
+.app{background:#0a0a0a;width:100%;max-width:420px;min-height:100vh;border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#fff;}
+.header{background:#111;border-bottom:1px solid #222;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.logo{font-size:12px;letter-spacing:3px;font-weight:500;}
+.logo span{color:#ff6b2b;}
+.owner-badge{background:#1f1200;border:1px solid #ff6b2b44;border-radius:6px;padding:2px 8px;font-size:10px;color:#ff6b2b;}
+.screen{padding:16px;}
+.stitle{font-size:10px;letter-spacing:2px;color:#555;margin-bottom:14px;}
+
+/* 売上サマリー */
+.sales-card{background:#111;border:1px solid #222;border-radius:16px;padding:18px;margin-bottom:12px;}
+.sales-date{font-size:11px;color:#555;margin-bottom:12px;}
+.sales-total{font-size:32px;font-weight:700;color:#fff;margin-bottom:4px;}
+.sales-sub{font-size:12px;color:#555;margin-bottom:16px;}
+.sales-split{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sales-split-item{background:#1a1a1a;border-radius:10px;padding:12px;}
+.sales-split-label{font-size:10px;color:#555;margin-bottom:4px;}
+.sales-split-val{font-size:18px;font-weight:600;}
+.sales-split-val.cash{color:#4caf50;}
+.sales-split-val.card{color:#5b9cf6;}
+.sales-groups{font-size:11px;color:#555;margin-top:12px;padding-top:12px;border-top:1px solid #1a1a1a;}
+
+/* タブ */
+.tabs{display:flex;gap:0;margin-bottom:14px;background:#111;border-radius:10px;padding:3px;}
+.tab{flex:1;text-align:center;padding:8px;font-size:12px;color:#555;cursor:pointer;border-radius:8px;}
+.tab.active{background:#1a1a1a;color:#fff;}
+
+/* グループカード */
+.gcard{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:14px;margin-bottom:8px;cursor:pointer;}
+.gcard.closed{border-color:#1a1a1a;}
+.gcard-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+.gcard-name{font-size:15px;font-weight:500;color:#fff;}
+.gcard-price{font-size:14px;font-weight:600;color:#ff6b2b;}
+.gcard-meta{font-size:11px;color:#555;}
+.pay-badge{display:inline-block;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:500;margin-left:6px;vertical-align:middle;}
+.pay-badge.cash{background:#1a2a1a;color:#4caf50;}
+.pay-badge.card{background:#1a1f2a;color:#5b9cf6;}
+.pay-badge.open{background:#1f1200;color:#ff6b2b;}
+
+/* 注文詳細 */
+.detail-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100;overflow-y:auto;}
+.detail-modal.show{display:block;}
+.detail-sheet{background:#0a0a0a;min-height:100vh;max-width:420px;margin:0 auto;padding:16px;}
+.detail-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.detail-back{background:transparent;border:1px solid #2a2a2a;border-radius:8px;padding:6px 12px;color:#555;font-size:11px;cursor:pointer;}
+.detail-title{font-size:14px;font-weight:500;color:#fff;}
+.order-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #111;}
+.order-item:last-child{border-bottom:none;}
+.order-name{font-size:13px;color:#ccc;}
+.order-meta{font-size:10px;color:#555;margin-top:2px;}
+.order-price{font-size:13px;color:#fff;font-weight:500;}
+.section-title{font-size:10px;letter-spacing:2px;color:#555;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid #1a1a1a;}
+.total-box{background:#111;border:1px solid #222;border-radius:12px;padding:14px;margin-top:12px;}
+.total-row{display:flex;justify-content:space-between;font-size:12px;color:#666;padding:4px 0;}
+.total-row.big{font-size:16px;font-weight:600;color:#fff;border-top:1px solid #222;margin-top:8px;padding-top:10px;}
+.total-row.tax{color:#ff6b2b;}
+
+/* 削除ログ */
+.del-log{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:10px 12px;margin-bottom:6px;}
+.del-log-name{font-size:13px;color:#e53935;}
+.del-log-meta{font-size:10px;color:#555;margin-top:3px;}
+
+/* セッション選択 */
+.session-card{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;}
+.session-card.active-session{border-color:#ff6b2b44;}
+.session-date{font-size:14px;font-weight:500;color:#fff;}
+.session-meta{font-size:11px;color:#555;margin-top:3px;}
+.session-sales{font-size:13px;color:#ff6b2b;font-weight:500;margin-top:4px;}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="header">
+  <div class="logo">BAR <span>RIVER</span></div>
+  <div class="owner-badge">OWNER</div>
+</div>
+
+<div class="screen">
+  <!-- 売上サマリー -->
+  <div class="sales-card">
+    <div class="sales-date" id="sales-date">—</div>
+    <div class="sales-total" id="sales-total">¥0</div>
+    <div class="sales-sub">税込売上合計</div>
+    <div class="sales-split">
+      <div class="sales-split-item">
+        <div class="sales-split-label">💴 現金</div>
+        <div class="sales-split-val cash" id="sales-cash">¥0</div>
+      </div>
+      <div class="sales-split-item">
+        <div class="sales-split-label">💳 カード</div>
+        <div class="sales-split-val card" id="sales-card">¥0</div>
+      </div>
+    </div>
+    <div class="sales-groups" id="sales-groups">—</div>
+  </div>
+
+  <!-- タブ -->
+  <div class="tabs">
+    <div class="tab active" id="tab-today" onclick="switchTab('today')">本日</div>
+    <div class="tab" id="tab-history" onclick="switchTab('history')">過去の営業</div>
+    <div class="tab" id="tab-dellog" onclick="switchTab('dellog')">削除ログ</div>
+  </div>
+
+  <div id="tab-content"></div>
+</div>
+
+<!-- 注文詳細モーダル -->
+<div class="detail-modal" id="detail-modal">
+  <div class="detail-sheet">
+    <div class="detail-header">
+      <button class="detail-back" onclick="closeDetail()">← 戻る</button>
+      <div class="detail-title" id="detail-title">—</div>
+    </div>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const DAYS=['日','月','火','水','木','金','土'];
+function fmtDate(d){return`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;}
+function fmtDateJP(d){return`${d.getMonth()+1}月${d.getDate()}日（${DAYS[d.getDay()]}）`;}
+function fmtTime(d){return`${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;}
+function fmtDateTime(iso){const d=new Date(iso);return`${fmtDateJP(d)} ${fmtTime(d)}`;}
+
+let groups=[],sessions=[],curSessionId=null,curTab='today';
+
+const SUPABASE_URL='https://haqenuqasavvgzyvufuv.supabase.co';
+const SUPABASE_KEY='sb_publishable_SwJYz-lUWQw23jLGdK1GpA_61gn0L1y';
+
+async function sbFetch(path){
+  const res=await fetch(SUPABASE_URL+'/rest/v1/'+path,{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});
+  if(!res.ok)return null;
+  const text=await res.text();
+  return text?JSON.parse(text):null;
+}
+
+async function loadData(){
+  try{
+    const cs=localStorage.getItem('river_cur_session');
+    if(cs)curSessionId=cs;
+    const sData=await sbFetch('sessions?order=started_at.asc');
+    if(sData)sessions=sData.map(s=>({id:s.id,startedAt:s.started_at,closedAt:s.closed_at,dateLabel:s.date_label}));
+    const gData=await sbFetch('groups?order=id.asc&select=*,orders(*)');
+    if(gData){
+      groups=gData.map(g=>({
+        id:g.id,sessionId:g.session_id,name:g.name,pax:g.pax,
+        shimei:g.shimei||[],closed:g.closed,closedAt:g.closed_at,
+        payMethod:g.pay_method,deleteLogs:g.delete_logs||[],
+        orders:(g.orders||[]).map(o=>({name:o.name,price:o.price,qty:o.qty,who:o.who,staff:o.staff,custom:o.custom,ts:o.ts}))
+      }));
+    }
+  }catch(e){console.error('loadData error:',e);}
+}
+
+function calcSales(groupList){
+  const closed=groupList.filter(g=>g.closed);
+  const total=closed.reduce((s,g)=>s+g.orders.reduce((a,o)=>a+(o.price*o.qty),0),0);
+  const cash=closed.filter(g=>g.payMethod==='cash').reduce((s,g)=>s+g.orders.reduce((a,o)=>a+(o.price*o.qty),0),0);
+  const card=closed.filter(g=>g.payMethod==='card').reduce((s,g)=>s+g.orders.reduce((a,o)=>a+(o.price*o.qty),0),0);
+  return{total:Math.round(total*1.1),cash:Math.round(cash*1.1),card:Math.round(card*1.1),closedCount:closed.length,totalCount:groupList.length};
+}
+
+function renderSummary(sessionGroups,sessionId){
+  const session=sessions.find(s=>s.id===sessionId);
+  const sales=calcSales(sessionGroups);
+  const d=session?new Date(session.startedAt):new Date();
+  document.getElementById('sales-date').textContent=fmtDateJP(d)+(session&&session.closedAt?' （閉店済）':' （営業中）');
+  document.getElementById('sales-total').textContent='¥'+sales.total.toLocaleString();
+  document.getElementById('sales-cash').textContent='¥'+sales.cash.toLocaleString();
+  document.getElementById('sales-card').textContent='¥'+sales.card.toLocaleString();
+  document.getElementById('sales-groups').textContent=`${sales.totalCount}グループ　会計済 ${sales.closedCount}組`;
+}
+
+function switchTab(tab){
+  curTab=tab;
+  ['today','history','dellog'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+  });
+  renderTab();
+}
+
+function renderTab(){
+  const el=document.getElementById('tab-content');
+  if(curTab==='today'){
+    const sg=curSessionId?groups.filter(g=>g.sessionId===curSessionId):[];
+    if(!sg.length){el.innerHTML='<div style="color:#333;font-size:13px;text-align:center;padding:30px;">本日のデータなし</div>';return;}
+    el.innerHTML=sg.map(g=>renderGroupCard(g)).join('');
+  } else if(curTab==='history'){
+    const pastSessions=[...sessions].filter(s=>s.id!==curSessionId).reverse();
+    if(!pastSessions.length){el.innerHTML='<div style="color:#333;font-size:13px;text-align:center;padding:30px;">過去の営業データなし</div>';return;}
+    el.innerHTML=pastSessions.map(s=>{
+      const sg=groups.filter(g=>g.sessionId===s.id);
+      const sales=calcSales(sg);
+      const d=new Date(s.startedAt);
+      return`<div class="session-card" onclick="showSessionDetail('${s.id}')">
+        <div class="session-date">${fmtDateJP(d)}</div>
+        <div class="session-meta">${fmtTime(d)}〜${s.closedAt?fmtTime(new Date(s.closedAt)):'—'}　${sg.length}グループ</div>
+        <div class="session-sales">¥${sales.total.toLocaleString()} <span style="font-size:10px;color:#555;">（現金¥${sales.cash.toLocaleString()} / カード¥${sales.card.toLocaleString()}）</span></div>
+      </div>`;
+    }).join('');
+  } else if(curTab==='dellog'){
+    const logs=[];
+    groups.forEach(g=>{
+      if(g.deleteLogs&&g.deleteLogs.length){
+        g.deleteLogs.forEach(l=>logs.push({...l,groupName:g.name}));
+      }
+    });
+    logs.sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+    if(!logs.length){el.innerHTML='<div style="color:#333;font-size:13px;text-align:center;padding:30px;">削除ログなし</div>';return;}
+    el.innerHTML=logs.map(l=>`
+      <div class="del-log">
+        <div class="del-log-name">🗑 ${l.name} ×${l.qty} <span style="font-size:11px;color:#555;">[${l.label}]</span></div>
+        <div class="del-log-meta">${l.groupName}　削除者：${l.deletedBy}　${fmtDateTime(l.ts)}</div>
+      </div>`).join('');
+  }
+}
+
+function renderGroupCard(g){
+  const sub=g.orders.reduce((s,o)=>s+(o.price*o.qty),0);
+  const total=Math.round(sub*1.1);
+  const payLabel=g.closed?(g.payMethod==='cash'?'現金':'カード'):'未会計';
+  const payClass=g.closed?(g.payMethod==='cash'?'cash':'card'):'open';
+  const timeStr=g.closed?fmtTime(new Date(g.closedAt)):'';
+  return`<div class="gcard${g.closed?' closed':''}" onclick="showGroupDetail(${g.id})">
+    <div class="gcard-top">
+      <div>
+        <div class="gcard-name">${g.name}<span class="pay-badge ${payClass}">${payLabel}</span></div>
+        <div class="gcard-meta">${g.pax}名　指名：${g.shimei.length?g.shimei.join('・'):'なし'}${timeStr?'　'+timeStr:''}</div>
+      </div>
+      <div class="gcard-price">¥${total.toLocaleString()}</div>
+    </div>
+  </div>`;
+}
+
+function showGroupDetail(id){
+  const g=groups.find(x=>x.id===id);
+  if(!g)return;
+  document.getElementById('detail-title').textContent=g.name;
+
+  const sub=g.orders.reduce((s,o)=>s+(o.price*o.qty),0);
+  const tax=Math.round(sub*0.1);
+  const total=sub+tax;
+
+  // 注文を担当別にグループ化
+  const byStaff={};
+  g.orders.forEach(o=>{
+    const label=o.who==='guest'?'お客様':o.staff||'—';
+    if(!byStaff[label])byStaff[label]=[];
+    byStaff[label].push(o);
+  });
+
+  let html='';
+  Object.entries(byStaff).forEach(([staff,orders])=>{
+    html+=`<div class="section-title">${staff}</div>`;
+    // 同じ商品をまとめる
+    const merged={};
+    orders.forEach(o=>{
+      if(!merged[o.name])merged[o.name]={name:o.name,price:o.price,qty:0};
+      merged[o.name].qty+=o.qty;
+    });
+    html+=Object.values(merged).map(o=>`
+      <div class="order-item">
+        <div><div class="order-name">${o.name}</div><div class="order-meta">×${o.qty}</div></div>
+        <div class="order-price">${o.price>0?'¥'+(o.price*o.qty).toLocaleString():'時価'}</div>
+      </div>`).join('');
+  });
+
+  html+=`<div class="total-box">
+    <div class="total-row"><span>小計（税抜）</span><span>¥${sub.toLocaleString()}</span></div>
+    <div class="total-row tax"><span>消費税 10%</span><span>¥${tax.toLocaleString()}</span></div>
+    <div class="total-row big"><span>税込合計</span><span>¥${total.toLocaleString()}</span></div>
+  </div>`;
+
+  if(g.deleteLogs&&g.deleteLogs.length){
+    html+=`<div class="section-title" style="color:#e53935;">削除ログ</div>`;
+    html+=g.deleteLogs.map(l=>`
+      <div class="del-log">
+        <div class="del-log-name">🗑 ${l.name} ×${l.qty}</div>
+        <div class="del-log-meta">削除者：${l.deletedBy}　${fmtDateTime(l.ts)}</div>
+      </div>`).join('');
+  }
+
+  document.getElementById('detail-content').innerHTML=html;
+  document.getElementById('detail-modal').classList.add('show');
+}
+
+function showSessionDetail(sessionId){
+  const sg=groups.filter(g=>g.sessionId===sessionId);
+  const session=sessions.find(s=>s.id===sessionId);
+  const d=new Date(session.startedAt);
+  document.getElementById('detail-title').textContent=fmtDateJP(d);
+  const sales=calcSales(sg);
+  let html=`<div class="total-box" style="margin-bottom:14px;">
+    <div class="total-row"><span>💴 現金</span><span>¥${sales.cash.toLocaleString()}</span></div>
+    <div class="total-row"><span>💳 カード</span><span>¥${sales.card.toLocaleString()}</span></div>
+    <div class="total-row big"><span>売上合計（税込）</span><span>¥${sales.total.toLocaleString()}</span></div>
+  </div>`;
+  html+=sg.map(g=>renderGroupCard(g)).join('');
+  document.getElementById('detail-content').innerHTML=html;
+  document.getElementById('detail-modal').classList.add('show');
+}
+
+function closeDetail(){
+  document.getElementById('detail-modal').classList.remove('show');
+}
+
+// 初期化
+async function init(){
+  document.getElementById('tab-content').innerHTML='<div style="color:#555;font-size:13px;text-align:center;padding:30px;">読み込み中...</div>';
+  await loadData();
+  const todayGroups=curSessionId?groups.filter(g=>g.sessionId===curSessionId):[];
+  renderSummary(todayGroups,curSessionId);
+  renderTab();
+}
+init();
+
+// 30秒ごとに自動更新
+setInterval(async()=>{
+  await loadData();
+  const sg=curSessionId?groups.filter(g=>g.sessionId===curSessionId):[];
+  renderSummary(sg,curSessionId);
+  renderTab();
+},30000);
+</script>
+</body>
+</html>
