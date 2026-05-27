@@ -918,7 +918,7 @@ function openKaikei(id){
 function openPayModal(){document.getElementById('pay-modal').classList.add('show');}
 function closePayModal(){document.getElementById('pay-modal').classList.remove('show');}
 
-function deleteOrderItem(groupId, name, label){
+async function deleteOrderItem(groupId, name, label){
   const g=groups.find(x=>x.id===groupId);
   if(!g)return;
   // labelから誰の注文か特定してguestかstaffか判定
@@ -972,7 +972,11 @@ function closeTutorial(){
 
 /* ---- Init ---- */
 async function init(){
-  await loadData();
+  try{
+    await loadData();
+  }catch(e){
+    console.error('init error:',e);
+  }
   // チュートリアル（初回のみ）
   if(!localStorage.getItem('river_tutorial_done')){
     showTutorial();
