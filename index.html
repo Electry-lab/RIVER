@@ -452,12 +452,16 @@ const SUPABASE_URL='https://haqenuqasavvgzyvufuv.supabase.co';
 const SUPABASE_KEY='sb_publishable_SwJYz-lUWQw23jLGdK1GpA_61gn0L1y';
 
 async function sbFetch(path, method='GET', body=null){
-  const opts={method,headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'}};
+  const headers={'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'};
+  if(method==='POST'||method==='PATCH')headers['Prefer']='return=representation';
+  const opts={method,headers};
   if(body)opts.body=JSON.stringify(body);
-  const res=await fetch(SUPABASE_URL+'/rest/v1/'+path,opts);
-  if(!res.ok){const e=await res.text();console.error('SB Error:',e);return null;}
-  const text=await res.text();
-  return text?JSON.parse(text):null;
+  try{
+    const res=await fetch(SUPABASE_URL+'/rest/v1/'+path,opts);
+    if(!res.ok){const e=await res.text();console.error('SB Error:',path,e);return null;}
+    const text=await res.text();
+    return text?JSON.parse(text):null;
+  }catch(e){console.error('SB Fetch Error:',e);return null;}
 }
 
 /* ---- DB操作 ---- */
@@ -968,8 +972,6 @@ function closeTutorial(){
 
 /* ---- Init ---- */
 async function init(){
-  // ローディング表示
-  document.getElementById('sc-open').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:80vh;color:#555;font-size:13px;">読み込み中...</div>';
   await loadData();
   // チュートリアル（初回のみ）
   if(!localStorage.getItem('river_tutorial_done')){
