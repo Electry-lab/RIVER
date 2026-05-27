@@ -103,11 +103,11 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
   </div>
 
   <!-- タブ -->
-  <div class="tabs">
-    <div class="tab active" id="tab-today" onclick="switchTab('today')">本日</div>
-    <div class="tab" id="tab-history" onclick="switchTab('history')">過去の営業</div>
-    <div class="tab" id="tab-dellog" onclick="switchTab('dellog')">削除ログ</div>
-    <div class="tab" id="tab-staff" onclick="switchTab('staff')">スタッフ</div>
+  <div class="tabs" id="main-tabs">
+    <div class="tab active" id="tab-today" data-tab="today">本日</div>
+    <div class="tab" id="tab-history" data-tab="history">過去の営業</div>
+    <div class="tab" id="tab-dellog" data-tab="dellog">削除ログ</div>
+    <div class="tab" id="tab-staff" data-tab="staff">スタッフ</div>
   </div>
 
   <div id="tab-content"></div>
@@ -126,7 +126,7 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
 
 </div>
 
-<script type="module">
+<script>
 const DAYS=['日','月','火','水','木','金','土'];
 function fmtDate(d){return`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;}
 function fmtDateJP(d){return`${d.getMonth()+1}月${d.getDate()}日（${DAYS[d.getDay()]}）`;}
@@ -377,6 +377,11 @@ function closeDetail(){
 // 初期化
 async function init(){
   document.getElementById('tab-content').innerHTML='<div style="color:#555;font-size:13px;text-align:center;padding:30px;">読み込み中...</div>';
+  // タブのクリックイベントをDOMContentLoaded後に設定
+  document.getElementById('main-tabs').addEventListener('click',function(e){
+    const tab=e.target.getAttribute('data-tab');
+    if(tab)switchTab(tab);
+  });
   await loadData();
   const todayGroups=curSessionId?groups.filter(g=>g.sessionId===curSessionId):[];
   renderSummary(todayGroups,curSessionId);
