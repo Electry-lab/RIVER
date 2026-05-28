@@ -154,6 +154,8 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
   <div style="display:flex;align-items:center;gap:8px;">
     <div class="owner-badge">OWNER</div>
     <div id="o-session-badge" style="font-size:10px;color:#555;"></div>
+    <button id="o-start-btn" onclick="oStartSession()" style="background:#ff6b2b;border:none;border-radius:6px;padding:4px 10px;color:#fff;font-size:10px;cursor:pointer;display:none;">営業開始</button>
+    <button id="o-close-btn" onclick="oOpenCloseModal()" style="background:transparent;border:1px solid #333;border-radius:6px;padding:4px 10px;color:#555;font-size:10px;cursor:pointer;display:none;">閉店</button>
   </div>
 </div>
 
@@ -294,6 +296,16 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
 </div>
 
 </div><!-- /app -->
+
+<!-- 閉店確認モーダル -->
+<div id="o-close-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#1a1a1a;border-radius:16px;padding:24px 20px;width:100%;max-width:380px;">
+    <div style="font-size:16px;font-weight:600;color:#fff;text-align:center;margin-bottom:8px;">閉店しますか？</div>
+    <div id="o-close-modal-stats" style="background:#111;border-radius:10px;padding:12px;margin:16px 0;"></div>
+    <button onclick="oConfirmClose()" style="background:#ff6b2b;border:none;border-radius:12px;width:100%;padding:14px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;">閉店する 🌙</button>
+    <button onclick="document.getElementById('o-close-modal').style.display='none'" style="background:transparent;border:none;color:#444;font-size:12px;width:100%;padding:8px;cursor:pointer;">キャンセル</button>
+  </div>
+</div>
 
 <!-- 支払いモーダル -->
 <div class="pay-modal" id="o-pay-modal">
@@ -661,7 +673,7 @@ function oOpenKaikei(id){
   else{
     const merged={};
     g.orders.forEach(o=>{const label=o.who==='guest'?'お客様':o.staff||OWNER_NAME;const key=o.name+'__'+label;if(!merged[key])merged[key]={name:o.name,price:o.price,qty:0,label};merged[key].qty+=o.qty;});
-    gEl.innerHTML=Object.values(merged).map(o=>`<div class="kaikei-item"><div><div class="kaikei-item-name">${o.name}</div><div class="kaikei-item-detail">${o.label}　×${o.qty}</div></div><div class="kaikei-item-price">${o.price>0?'¥'+(o.price*o.qty).toLocaleString():'時価'}</div></div>`).join('');
+    gEl.innerHTML=Object.values(merged).map(o=>`<div class="kaikei-item"><div style="flex:1;"><div class="kaikei-item-name">${o.name}</div><div class="kaikei-item-detail">${o.label}　×${o.qty}</div></div><div style="display:flex;align-items:center;gap:8px;"><div class="kaikei-item-price">${o.price>0?'¥'+(o.price*o.qty).toLocaleString():'時価'}</div>${!g.closed?`<button onclick="oDeleteOrderItem(${g.id},'${o.name}','${o.label}')" style="background:transparent;border:1px solid #333;border-radius:6px;padding:3px 8px;color:#555;font-size:11px;cursor:pointer;">削除</button>`:''}</div></div>`).join('');
   }
   const sub=g.orders.reduce((s,o)=>s+(o.price*o.qty),0);
   const tax=Math.round(sub*0.1);
@@ -763,6 +775,28 @@ document.getElementById('o-pay-cash').addEventListener('click',()=>oCloseGroup('
 document.getElementById('o-pay-card').addEventListener('click',()=>oCloseGroup('card'));
 document.getElementById('o-pay-cancel').addEventListener('click',oClosePayModal);
 
+async function oDeleteOrderItem(groupId, name, label){
+  const g=groups.find(x=>x.id===groupId);
+  if(!g)return;
+  let found=false;
+  for(let i=0;i<g.orders.length;i++){
+    const o=g.orders[i];
+    const oLabel=o.who==='guest'?'お客様':o.staff||OWNER_NAME;
+    if(o.name===name&&oLabel===label){
+      if(!g.deleteLogs)g.deleteLogs=[];
+      g.deleteLogs.push({name,label,qty:1,price:o.price,deletedBy:OWNER_NAME,ts:new Date().toISOString()});
+      o.qty-=1;
+      if(o.qty<=0)g.orders.splice(i,1);
+      found=true;
+      break;
+    }
+  }
+  if(!found)return;
+  await saveGroup(g);
+  await saveOrders(g.id,g.orders);
+  oOpenKaikei(groupId);
+}
+
 function showSessionDetail(sessionId){
   const sg=groups.filter(g=>g.sessionId===sessionId);
   const session=sessions.find(s=>s.id===sessionId);
@@ -775,14 +809,66 @@ function showSessionDetail(sessionId){
   document.getElementById('detail-modal').classList.add('show');
 }
 
+/* ---- 営業開始・閉店 ---- */
+async function oStartSession(){
+  const now=new Date();
+  curSessionId='session_'+now.getTime();
+  const session={id:curSessionId,startedAt:now.toISOString(),closedAt:null,dateLabel:fmtDate(now)};
+  sessions.push(session);
+  localStorage.setItem('river_cur_session',curSessionId);
+  await sbFetch('sessions','POST',{id:session.id,started_at:session.startedAt,closed_at:null,date_label:session.dateLabel});
+  document.getElementById('o-session-badge').textContent=fmtDateJP(now);
+  document.getElementById('o-start-btn').style.display='none';
+  document.getElementById('o-close-btn').style.display='block';
+  renderOGroups();
+}
+
+function oOpenCloseModal(){
+  const sg=curSessionId?groups.filter(g=>g.sessionId===curSessionId):[];
+  const unclosed=sg.filter(g=>!g.closed);
+  const sales=calcSales(sg);
+  document.getElementById('o-close-modal-stats').innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#888;padding:3px 0;"><span>グループ数</span><span>${sg.length}組</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#888;padding:3px 0;"><span>未会計</span><span style="color:${unclosed.length>0?'#ff6b2b':'#888'}">${unclosed.length}組</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;color:#fff;border-top:1px solid #222;margin-top:6px;padding-top:8px;"><span>売上合計（税込）</span><span>¥${sales.total.toLocaleString()}</span></div>
+  `;
+  document.getElementById('o-close-modal').style.display='flex';
+}
+
+async function oConfirmClose(){
+  document.getElementById('o-close-modal').style.display='none';
+  const now=new Date();
+  const session=sessions.find(s=>s.id===curSessionId);
+  if(session){
+    session.closedAt=now.toISOString();
+    await sbFetch('sessions?id=eq.'+curSessionId,'PATCH',{closed_at:now.toISOString()});
+  }
+  localStorage.setItem('river_cur_session','');
+  curSessionId=null;
+  document.getElementById('o-session-badge').textContent='';
+  document.getElementById('o-start-btn').style.display='block';
+  document.getElementById('o-close-btn').style.display='none';
+  renderOGroups();
+}
+
 /* ---- Init ---- */
 async function init(){
   document.getElementById('o-glist').innerHTML='<div style="color:#555;font-size:13px;text-align:center;padding:20px;">読み込み中...</div>';
   await loadData();
-  // セッションバッジ
+  // セッションバッジと営業ボタン
   if(curSessionId){
     const session=sessions.find(s=>s.id===curSessionId);
-    if(session){const d=new Date(session.startedAt);document.getElementById('o-session-badge').textContent=fmtDateJP(d);}
+    if(session&&!session.closedAt){
+      const d=new Date(session.startedAt);
+      document.getElementById('o-session-badge').textContent=fmtDateJP(d);
+      document.getElementById('o-close-btn').style.display='block';
+    } else {
+      curSessionId=null;
+      localStorage.setItem('river_cur_session','');
+      document.getElementById('o-start-btn').style.display='block';
+    }
+  } else {
+    document.getElementById('o-start-btn').style.display='block';
   }
   renderOGroups();
   // 30秒ごとに自動更新
