@@ -120,11 +120,11 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
 .kaikei-meta{font-size:11px;color:#555;}
 .kaikei-section{margin-bottom:14px;}
 .kaikei-section-title{font-size:10px;letter-spacing:2px;color:#555;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #1a1a1a;}
-.kaikei-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #111;}
+.kaikei-item{display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid #1a1a1a;}
 .kaikei-item:last-child{border-bottom:none;}
-.kaikei-item-name{font-size:13px;color:#ccc;}
-.kaikei-item-detail{font-size:10px;color:#555;margin-top:2px;}
-.kaikei-item-price{font-size:13px;color:#fff;font-weight:500;}
+.kaikei-item-name{font-size:14px;color:#fff;}
+.kaikei-item-detail{font-size:11px;color:#888;margin-top:3px;}
+.kaikei-item-price{font-size:14px;color:#fff;font-weight:600;}
 .kaikei-total-box{background:#111;border:1px solid #222;border-radius:12px;padding:14px;}
 .kaikei-row{display:flex;justify-content:space-between;font-size:12px;color:#666;padding:4px 0;}
 .kaikei-row.big{font-size:16px;font-weight:600;color:#fff;border-top:1px solid #222;margin-top:8px;padding-top:10px;}
@@ -747,7 +747,7 @@ function oOpenKaikei(id){
   else{
     const merged={};
     g.orders.forEach(o=>{const label=o.who==='guest'?'お客様':o.staff||OWNER_NAME;const key=o.name+'__'+label;if(!merged[key])merged[key]={name:o.name,price:o.price,qty:0,label};merged[key].qty+=o.qty;});
-    gEl.innerHTML=Object.values(merged).map(o=>`<div class="kaikei-item"><div style="flex:1;"><div class="kaikei-item-name">${o.name}</div><div class="kaikei-item-detail">${o.label}　×${o.qty}</div></div><div style="display:flex;align-items:center;gap:8px;"><div class="kaikei-item-price">${o.price>0?'¥'+(o.price*o.qty).toLocaleString():'時価'}</div>${!g.closed?`<button onclick="oDeleteOrderItem(${g.id},'${o.name}','${o.label}')" style="background:transparent;border:1px solid #333;border-radius:6px;padding:3px 8px;color:#555;font-size:11px;cursor:pointer;">削除</button>`:''}</div></div>`).join('');
+    gEl.innerHTML=Object.values(merged).map(o=>`<div class="kaikei-item"><div style="flex:1;"><div class="kaikei-item-name">${o.name}</div><div class="kaikei-item-detail">${o.label}　×${o.qty}</div></div><div style="display:flex;align-items:center;gap:8px;"><div class="kaikei-item-price">${o.price>0?'¥'+(o.price*o.qty).toLocaleString():'時価'}</div>${!g.closed?`<button onclick="oDeleteOrderItem(${g.id},'${o.name}','${o.label}')" style="background:#2a1a1a;border:1px solid #e5393544;border-radius:8px;padding:8px 12px;color:#e53935;font-size:12px;cursor:pointer;min-width:44px;">削除</button>`:''}</div></div>`).join('');
   }
   const sub=g.orders.reduce((s,o)=>s+(o.price*o.qty),0);
   const tax=Math.round(sub*0.1);
@@ -756,7 +756,38 @@ function oOpenKaikei(id){
   document.getElementById('o-k-total').textContent='¥'+(sub+tax).toLocaleString();
   const btn=document.getElementById('o-k-close-btn');
   const msg=document.getElementById('o-k-closed-msg');
-  if(g.closed){btn.style.display='none';msg.style.display='block';const payLabel=g.payMethod==='cash'?'💴 現金':'💳 カード';msg.textContent='会計済　'+payLabel+'　'+fmtTime(new Date(g.closedAt));}
+  if(g.closed){
+    btn.style.display='none';
+    const payLabel=g.payMethod==='cash'?'💴 現金':'💳 カード';
+    const backData=calcBackForSession([g]);
+    const myBack=backData[g.shimei&&g.shimei.length?g.shimei[0]:'']||{drink:0,pct:0,shimei:0,total:0};
+    let backHtml='';
+    Object.entries(backData).forEach(([name,b])=>{
+      if(b.total===0)return;
+      backHtml+=`<div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:10px 12px;margin-top:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:13px;color:#fff;font-weight:500;">${name}</div>
+          <div style="font-size:14px;color:#ff6b2b;font-weight:700;">¥${b.total.toLocaleString()}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;">
+          <div style="background:#111;border-radius:6px;padding:6px;text-align:center;"><div style="font-size:9px;color:#555;margin-bottom:2px;">ドリンク</div><div style="font-size:11px;color:#ccc;">¥${b.drink.toLocaleString()}</div></div>
+          <div style="background:#111;border-radius:6px;padding:6px;text-align:center;"><div style="font-size:9px;color:#555;margin-bottom:2px;">シャンパン</div><div style="font-size:11px;color:#ccc;">¥${b.pct.toLocaleString()}</div></div>
+          <div style="background:#111;border-radius:6px;padding:6px;text-align:center;"><div style="font-size:9px;color:#555;margin-bottom:2px;">指名</div><div style="font-size:11px;color:#ccc;">¥${b.shimei.toLocaleString()}</div></div>
+        </div>
+      </div>`;
+    });
+    msg.style.display='block';
+    msg.innerHTML=`
+      <div style="background:#1f1200;border:1px solid #ff6b2b44;border-radius:10px;padding:12px;margin-bottom:10px;">
+        <div style="font-size:12px;color:#ff6b2b;font-weight:600;margin-bottom:8px;">会計済　${payLabel}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button onclick="oChangePayMethod('cash')" style="background:${g.payMethod==='cash'?'#1a2a1a':'#111'};border:2px solid ${g.payMethod==='cash'?'#4caf50':'#333'};border-radius:10px;padding:12px;color:${g.payMethod==='cash'?'#4caf50':'#555'};font-size:14px;cursor:pointer;">💴 現金</button>
+          <button onclick="oChangePayMethod('card')" style="background:${g.payMethod==='card'?'#1a1f2a':'#111'};border:2px solid ${g.payMethod==='card'?'#5b9cf6':'#333'};border-radius:10px;padding:12px;color:${g.payMethod==='card'?'#5b9cf6':'#555'};font-size:14px;cursor:pointer;">💳 カード</button>
+        </div>
+      </div>
+      ${backHtml?`<div style="font-size:10px;color:#555;letter-spacing:1px;margin-top:12px;margin-bottom:6px;">バック明細</div>${backHtml}`:''}
+    `;
+  }
   else{btn.style.display='block';msg.style.display='none';document.getElementById('o-pay-amount').textContent='¥'+(sub+tax).toLocaleString();}
   document.getElementById('o-groups-view').style.display='none';
   document.getElementById('o-order-view').style.display='none';
@@ -765,6 +796,14 @@ function oOpenKaikei(id){
 
 function oOpenPayModal(){document.getElementById('o-pay-modal').classList.add('show');}
 function oClosePayModal(){document.getElementById('o-pay-modal').classList.remove('show');}
+
+async function oChangePayMethod(method){
+  const g=groups.find(x=>x.id===oCurGroupId);
+  if(!g||!g.closed)return;
+  g.payMethod=method;
+  await saveGroup(g);
+  oOpenKaikei(oCurGroupId); // 画面更新
+}
 
 async function oCloseGroup(method){
   oClosePayModal();
