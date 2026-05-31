@@ -906,10 +906,6 @@ document.addEventListener('click', async function(e){
   const kaikeiBtn=e.target.closest('[data-kaikei]');
   if(kaikeiBtn)oOpenKaikei(parseInt(kaikeiBtn.dataset.kaikei));
 
-  // 売上タブのグループカード
-  const salesGcard=e.target.closest('[data-group]');
-  if(salesGcard&&salesGcard.closest('#sales-content'))showGroupDetail(parseInt(salesGcard.dataset.group));
-
   // 売上タブのグループカード → 詳細モーダル
   const salesGcard=e.target.closest('[data-detail-group]');
   if(salesGcard&&salesGcard.closest('#sales-content')){
