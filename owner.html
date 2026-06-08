@@ -630,6 +630,11 @@ function showGroupDetail(id){
     html+=g.deleteLogs.map(l=>`<div class="del-log"><div class="del-log-name">🗑 ${l.name} ×${l.qty}</div><div class="del-log-meta">削除者：${l.deletedBy}　${fmtDateTime(l.ts)}</div></div>`).join('');
   }
 
+  // 未会計の場合は会計ボタンを表示
+  if(!g.closed){
+    html+=`<button onclick="document.getElementById('detail-modal').classList.remove('show');switchMainTab('order');oOpenKaikei(${g.id});" style="background:#ff6b2b;border:none;border-radius:12px;width:100%;padding:14px;color:#fff;font-size:14px;font-weight:600;margin-top:16px;cursor:pointer;">会計を締める ✓</button>`;
+  }
+
   document.getElementById('detail-content').innerHTML=html;
   document.getElementById('detail-modal').classList.add('show');
 }
@@ -646,7 +651,7 @@ async function changePayMethodFromDetail(groupId, method){
 /* ---- 注文タブ：グループ一覧 ---- */
 function renderOGroups(){
   const el=document.getElementById('o-glist');
-  const sg=curSessionId?groups.filter(g=>g.sessionId===curSessionId&&!g.closed):[];
+  const sg=groups.filter(g=>!g.closed&&(g.sessionId===curSessionId||!curSessionId));
   if(!sg.length){el.innerHTML='<div style="color:#333;font-size:13px;text-align:center;padding:20px;">営業中のグループなし</div>';return;}
   el.innerHTML=sg.map(g=>{
     const sub=g.orders.reduce((s,o)=>s+(o.price*o.qty),0);
