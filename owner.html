@@ -354,6 +354,7 @@ const MENUS={
 
 // バック対象定義
 const DRINK_BACK_ITEMS=['テキーラ クエルボ','クライナー','コカボム','アネホ','グラス','缶']; // 杯数×100円
+const NO_BACK_STAFF=['りいや']; // バック計算対象外スタッフ
 const PCT_BACK_ITEMS=['シャブリ','ヴーヴイエロー','ペリエ白','モエアイス','モエピカ','モエネク','ペリエロゼ','ウルトラ','ソウメイ','ベルエポ','ドンペリ白','ドンペリロゼ','アルマンドゴールド','アルマンドロゼ','観覧車 クエルボ','観覧車 アネホ','シップ クエルボ','シップ アネホ']; // 金額×10%
 const CHAMPAGNE_NAMES=['シャブリ','ヴーヴイエロー','ペリエ白','モエアイス','モエピカ','モエネク','ペリエロゼ','ウルトラ','ソウメイ','ベルエポ','ドンペリ白','ドンペリロゼ','アルマンドゴールド','アルマンドロゼ']; // 指名バック計算から除外
 
@@ -369,6 +370,7 @@ function calcBackForSession(sessionGroups){
       if(o.who!=='self'&&o.who!=='other')return;
       const staffName=o.staff||'';
       if(!staffName)return;
+      if(NO_BACK_STAFF.includes(staffName))return; // バック対象外スタッフはスキップ
       if(!staffBack[staffName])staffBack[staffName]={drink:0,pct:0,shimei:0,total:0};
       if(DRINK_BACK_ITEMS.includes(o.name)){
         // ドリンクバック：指名なし卓は全員、指名あり卓はother（他スタッフ）のみ
@@ -390,6 +392,7 @@ function calcBackForSession(sessionGroups){
       const shimeiBackTotal=Math.round(shimeiBase*0.1);
       const perStaff=Math.round(shimeiBackTotal/g.shimei.length);
       g.shimei.forEach(s=>{
+        if(NO_BACK_STAFF.includes(s))return; // バック対象外スタッフはスキップ
         if(!staffBack[s])staffBack[s]={drink:0,pct:0,shimei:0,total:0};
         staffBack[s].shimei+=perStaff;
       });
