@@ -420,10 +420,17 @@ async function sbFetch(path,method='GET',body=null){
 }
 
 async function loadData(){
-  const cs=localStorage.getItem('river_cur_session');
-  if(cs)curSessionId=cs;
+  try{
+    const cs=localStorage.getItem('river_cur_session');
+    if(cs)curSessionId=cs;
+  }catch(e){curSessionId=null;}
   const sData=await sbFetch('sessions?order=started_at.asc');
   if(sData)sessions=sData.map(s=>({id:s.id,startedAt:s.started_at,closedAt:s.closed_at,dateLabel:s.date_label}));
+  // localStorageのセッションIDがSupabaseに存在しない場合はリセット
+  if(curSessionId&&!sessions.find(s=>s.id===curSessionId)){
+    curSessionId=null;
+    try{localStorage.setItem('river_cur_session','');}catch(e){}
+  }
   const gData=await sbFetch('groups?order=id.asc&select=*,orders(*)');
   if(gData){
     groups=gData.map(g=>({
