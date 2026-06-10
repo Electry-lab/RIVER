@@ -560,7 +560,7 @@ async function startSession(){
 }
 
 function openCloseModal(){
-  const sessionGroups=groups.filter(g=>g.sessionId===curSessionId);
+  const sessionGroups=groups.filter(g=>g.sessionId===curSessionId||!g.sessionId);
   const unclosed=sessionGroups.filter(g=>!g.closed);
   const closedGroups=sessionGroups.filter(g=>g.closed);
   const totalSales=closedGroups.reduce((s,g)=>{
@@ -592,7 +592,7 @@ async function confirmClose(){
   }
 
   // 閉店画面の集計
-  const sessionGroups=groups.filter(g=>g.sessionId===curSessionId);
+  const sessionGroups=groups.filter(g=>g.sessionId===curSessionId||!g.sessionId);
   const closedGroups=sessionGroups.filter(g=>g.closed);
   const totalSales=closedGroups.reduce((s,g)=>{
     return s+g.orders.reduce((a,o)=>a+(o.price*o.qty),0);
@@ -693,8 +693,8 @@ function selStaff(name){
 /* ---- Groups ---- */
 function renderGroups(){
   const el=document.getElementById('glist');
-  // 現セッションのみ表示
-  const sessionGroups=groups.filter(g=>g.sessionId===curSessionId);
+  // 現セッションのみ表示（sessionId未設定のグループも含む）
+  const sessionGroups=groups.filter(g=>g.sessionId===curSessionId||!g.sessionId);
   const list=sessionGroups.filter(g=>curTab==='active'?!g.closed:g.closed);
   if(!list.length){
     el.innerHTML=`<div style="color:#333;font-size:13px;text-align:center;padding:30px 0;">${curTab==='active'?'営業中のグループなし':'本日の履歴なし'}</div>`;
