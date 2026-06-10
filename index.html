@@ -424,7 +424,7 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
 </div>
 
 <script>
-let STAFF=[];
+let STAFF=[],ALL_STAFF=[];
 let CAN_EDIT=[];
 let CAN_CLOSE=[];
 let CAN_KAIKEI=[];
@@ -432,7 +432,9 @@ let CAN_KAIKEI=[];
 async function loadStaff(){
   const data=await sbFetch('staff?active=eq.true&order=id.asc');
   if(!data)return;
-  STAFF=data.map(s=>s.name);
+  const OWNER_NAMES=['りいや']; // オーナーはスタッフ選択に表示しない
+  STAFF=data.filter(s=>!OWNER_NAMES.includes(s.name)).map(s=>s.name);
+  ALL_STAFF=data.map(s=>s.name); // 他スタッフ・指名には全員表示
   CAN_EDIT=data.filter(s=>s.can_edit).map(s=>s.name);
   CAN_CLOSE=data.filter(s=>s.can_close).map(s=>s.name);
   CAN_KAIKEI=data.filter(s=>s.can_kaikei).map(s=>s.name);
@@ -630,7 +632,7 @@ function renderStaffGrid(){
     return `<div class="sbtn" onclick="selStaff('${name}')"><div class="av">${initial}</div><div class="sname">${name}</div></div>`;
   }).join('');
   // shimei-selとother-staff-listも更新
-  document.getElementById('shimei-sel').innerHTML=STAFF.map(s=>`<div class="msbtn" onclick="this.classList.toggle('sel')">${s}</div>`).join('');
+  document.getElementById('shimei-sel').innerHTML=ALL_STAFF.map(s=>`<div class="msbtn" onclick="this.classList.toggle('sel')">${s}</div>`).join('');
 }
 
 /* ---- Logout ---- */
@@ -684,8 +686,8 @@ function selStaff(name){
   renderGroups();
   goTo('sc-groups');
   const all=STAFF.includes(name)?STAFF:[...STAFF,name];
-  document.getElementById('shimei-sel').innerHTML=all.map(s=>`<div class="msbtn" onclick="this.classList.toggle('sel')">${s}</div>`).join('');
-  document.getElementById('other-staff-list').innerHTML=all.filter(s=>s!==name).map(s=>`<div class="msbtn" onclick="selOther(this,'${s}')">${s}</div>`).join('');
+  document.getElementById('shimei-sel').innerHTML=ALL_STAFF.map(s=>`<div class="msbtn" onclick="this.classList.toggle('sel')">${s}</div>`).join('');
+  document.getElementById('other-staff-list').innerHTML=ALL_STAFF.filter(s=>s!==name).map(s=>`<div class="msbtn" onclick="selOther(this,'${s}')">${s}</div>`).join('');
   document.getElementById('header-close-btn').style.display=CAN_CLOSE.includes(name)?'block':'none';
 }
 
