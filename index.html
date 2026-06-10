@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="BAR RIVER">
 <meta name="theme-color" content="#ff6b2b">
 <link rel="manifest" href="manifest.json">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BAR RIVER 注文システム</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -266,12 +266,10 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
   <div id="custom-input-area" style="display:none;margin-top:8px;">
     <div style="background:#151515;border:1px solid #2a2a2a;border-radius:10px;padding:10px 12px;">
       <div style="font-size:10px;color:#555;margin-bottom:8px;letter-spacing:1px;">カスタム追加</div>
-      <div style="margin-bottom:6px;">
-        <input type="text" id="custom-name" placeholder="品名（例：限定ボトル）" style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px 10px;color:#fff;font-size:13px;width:100%;box-sizing:border-box;" />
-      </div>
       <div style="display:flex;gap:6px;margin-bottom:6px;">
-        <input type="number" id="custom-price" placeholder="金額" style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px 10px;color:#fff;font-size:13px;flex:1;" />
-        <input type="number" id="custom-qty" placeholder="個数" min="1" value="1" style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px 10px;color:#fff;font-size:13px;width:80px;" />
+        <input type="text" id="custom-name" placeholder="品名（例：限定ボトル）" style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px 10px;color:#fff;font-size:13px;flex:1;" />
+        <input type="number" id="custom-price" placeholder="金額" style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px 10px;color:#fff;font-size:13px;width:80px;" />
+        <input type="number" id="custom-qty" placeholder="個数" min="1" value="1" style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px 10px;color:#fff;font-size:13px;width:60px;" />
       </div>
       <button onclick="addCustomItem()" style="background:#ff6b2b;border:none;border-radius:8px;padding:8px;color:#fff;font-size:13px;font-weight:500;width:100%;cursor:pointer;">追加 +</button>
     </div>
@@ -506,8 +504,9 @@ async function loadData(){
     const sData=await sbFetch('sessions?order=started_at.asc');
     if(sData)sessions=sData.map(s=>({id:s.id,startedAt:s.started_at,closedAt:s.closed_at,dateLabel:s.date_label}));
 
-    // localStorageのセッションIDがSupabaseに存在しない場合はリセット
-    if(curSessionId&&!sessions.find(s=>s.id===curSessionId)){
+    // localStorageのセッションIDがSupabaseに存在しない or 閉店済みの場合はリセット
+    const foundSession=sessions.find(s=>s.id===curSessionId);
+    if(curSessionId&&(!foundSession||foundSession.closedAt)){
       curSessionId=null;
       localStorage.setItem('river_cur_session','');
     }
@@ -615,6 +614,7 @@ async function confirmClose(){
   `;
 
   curSessionId=null;
+  saveLocalSession(); // localStorageもクリア
   curStaff='';
   document.getElementById('hinfo').style.display='none';
   document.getElementById('logout-btn').style.display='none';
