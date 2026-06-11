@@ -1063,21 +1063,8 @@ async function init(){
   if(!localStorage.getItem('river_tutorial_done')){
     showTutorial();
   }
-  // 起動時：進行中のセッションがあればスタッフ選択へ
-  if(curSessionId){
-    const session=sessions.find(s=>s.id===curSessionId);
-    if(session&&!session.closedAt){
-      const d=new Date(session.startedAt);
-      document.getElementById('session-date-badge').textContent=fmtDateJP(d);
-      document.getElementById('header-close-btn').style.display='none';
-      goTo('sc-staff');
-    } else {
-      curSessionId=null;
-      initOpenScreen();
-    }
-  } else {
-    initOpenScreen();
-  }
+  // 常にスタッフ選択画面へ
+  goTo('sc-staff');
   renderStaffGrid();
 }
 init();
