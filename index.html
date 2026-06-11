@@ -1084,7 +1084,9 @@ async function init(){
   const savedStaff=localStorage.getItem('river_cur_staff');
   if(savedStaff&&STAFF.includes(savedStaff)){
     curStaff=savedStaff;
-    renderHeader();
+    document.getElementById('hinfo').textContent=savedStaff;
+    document.getElementById('hinfo').style.display='inline';
+    document.getElementById('logout-btn').style.display='inline';
     goTo('sc-groups');
     renderGroups();
   } else {
