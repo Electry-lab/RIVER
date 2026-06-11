@@ -683,7 +683,7 @@ async function changePayMethodFromDetail(groupId, method){
 /* ---- 注文タブ：グループ一覧 ---- */
 function renderOGroups(){
   const el=document.getElementById('o-glist');
-  const sg=groups.filter(g=>!g.closed&&(g.sessionId===curSessionId||!curSessionId));
+  const sg=groups.filter(g=>!g.closed&&(g.sessionId===curSessionId||!g.sessionId));
   if(!sg.length){el.innerHTML='<div style="color:#333;font-size:13px;text-align:center;padding:20px;">営業中のグループなし</div>';return;}
   el.innerHTML=sg.map(g=>{
     const sub=g.orders.reduce((s,o)=>s+(o.price*o.qty),0);
