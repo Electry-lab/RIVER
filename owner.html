@@ -518,9 +518,7 @@ function calcSales(groupList){
 function renderSalesTab(){
   // curSessionIdがない場合は今日のセッションを探す
   if(!curSessionId){
-    const nowJST=new Date(Date.now()+9*60*60*1000);
-    const today=nowJST.toISOString().slice(0,10);
-    const todaySession=sessions.find(s=>!s.closedAt&&s.startedAt&&new Date(new Date(s.startedAt).getTime()+9*60*60*1000).toISOString().slice(0,10)===today);
+    const todaySession=sessions.find(s=>!s.closedAt);
     if(todaySession)curSessionId=todaySession.id;
   }
   const sg=curSessionId?groups.filter(g=>g.sessionId===curSessionId||!g.sessionId):[];
@@ -1054,9 +1052,7 @@ document.addEventListener('click', async function(e){
 document.getElementById('o-addgroup-btn').addEventListener('click',()=>{
   if(!curSessionId){
     // 今日の未閉店セッションがあれば継続を提案
-    const nowJST=new Date(Date.now()+9*60*60*1000);
-    const today=nowJST.toISOString().slice(0,10);
-    const activeSession=sessions.find(s=>!s.closedAt&&s.startedAt&&new Date(new Date(s.startedAt).getTime()+9*60*60*1000).toISOString().slice(0,10)===today);
+    const activeSession=sessions.find(s=>!s.closedAt);
     const modal=document.getElementById('o-session-confirm-modal');
     const btnArea=document.getElementById('o-session-btn-area');
     if(activeSession){
