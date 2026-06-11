@@ -160,7 +160,7 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
     <div class="owner-badge">OWNER</div>
     <div id="o-session-badge" style="font-size:10px;color:#555;"></div>
     <button id="o-start-btn" onclick="oStartSession()" style="background:#ff6b2b;border:none;border-radius:6px;padding:4px 10px;color:#fff;font-size:10px;cursor:pointer;display:none;">営業開始</button>
-    <button onclick="loadData().then(()=>{renderOGroups();renderSalesTab();})" style="background:transparent;border:none;color:#555;font-size:16px;cursor:pointer;padding:4px 6px;">🔄</button>
+    <button onclick="const s=curSessionId;loadData().then(()=>{if(s)curSessionId=s;renderOGroups();renderSalesTab();})" style="background:transparent;border:none;color:#555;font-size:16px;cursor:pointer;padding:4px 6px;">🔄</button>
     <button id="o-close-btn" onclick="oOpenCloseModal()" style="background:transparent;border:1px solid #333;border-radius:6px;padding:4px 10px;color:#555;font-size:10px;cursor:pointer;display:none;">閉店</button>
   </div>
 </div>
@@ -492,6 +492,16 @@ function switchMainTab(tab){
   document.getElementById('sc-order-tab').classList.toggle('active',tab==='order');
   document.getElementById('sc-sales-tab').classList.toggle('active',tab==='sales');
   document.getElementById('sc-staff-tab').classList.toggle('active',tab==='staff-mgmt');
+  if(tab==='order'){
+    // 注文タブ：今日の未閉店セッションがあれば自動でセット
+    if(!curSessionId){
+      const nowJST=new Date(Date.now()+9*60*60*1000);
+      const today=nowJST.toISOString().slice(0,10);
+      const active=sessions.find(s=>!s.closedAt&&s.startedAt&&new Date(new Date(s.startedAt).getTime()+9*60*60*1000).toISOString().slice(0,10)===today);
+      if(active)curSessionId=active.id;
+    }
+    renderOGroups();
+  }
   if(tab==='sales')renderSalesTab();
   if(tab==='staff-mgmt')renderStaffMgmt();
 }
@@ -508,9 +518,7 @@ function calcSales(groupList){
 function renderSalesTab(){
   // curSessionIdがない場合は今日のセッションを探す
   if(!curSessionId){
-    const nowJST=new Date(Date.now()+9*60*60*1000);
-    const today=nowJST.toISOString().slice(0,10);
-    const todaySession=sessions.find(s=>!s.closedAt&&s.startedAt&&new Date(new Date(s.startedAt).getTime()+9*60*60*1000).toISOString().slice(0,10)===today);
+    const todaySession=sessions.find(s=>!s.closedAt);
     if(todaySession)curSessionId=todaySession.id;
   }
   const sg=curSessionId?groups.filter(g=>g.sessionId===curSessionId||!g.sessionId):[];
@@ -1044,9 +1052,7 @@ document.addEventListener('click', async function(e){
 document.getElementById('o-addgroup-btn').addEventListener('click',()=>{
   if(!curSessionId){
     // 今日の未閉店セッションがあれば継続を提案
-    const nowJST=new Date(Date.now()+9*60*60*1000);
-    const today=nowJST.toISOString().slice(0,10);
-    const activeSession=sessions.find(s=>!s.closedAt&&s.startedAt&&new Date(new Date(s.startedAt).getTime()+9*60*60*1000).toISOString().slice(0,10)===today);
+    const activeSession=sessions.find(s=>!s.closedAt);
     const modal=document.getElementById('o-session-confirm-modal');
     const btnArea=document.getElementById('o-session-btn-area');
     if(activeSession){
