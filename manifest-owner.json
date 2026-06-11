@@ -2,7 +2,7 @@
   "name": "RIVER OWNER",
   "short_name": "RIVER管理",
   "description": "BAR RIVER オーナー管理システム",
-  "start_url": "/RIVER/owner.html",
+  "start_url": "https://electry-lab.github.io/RIVER/owner.html",
   "display": "standalone",
   "background_color": "#050505",
   "theme_color": "#ff6b2b",
