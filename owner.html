@@ -160,6 +160,7 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
     <div class="owner-badge">OWNER</div>
     <div id="o-session-badge" style="font-size:10px;color:#555;"></div>
     <button id="o-start-btn" onclick="oStartSession()" style="background:#ff6b2b;border:none;border-radius:6px;padding:4px 10px;color:#fff;font-size:10px;cursor:pointer;display:none;">営業開始</button>
+    <button onclick="loadData().then(()=>{renderOGroups();renderSalesTab();})" style="background:transparent;border:none;color:#555;font-size:16px;cursor:pointer;padding:4px 6px;">🔄</button>
     <button id="o-close-btn" onclick="oOpenCloseModal()" style="background:transparent;border:1px solid #333;border-radius:6px;padding:4px 10px;color:#555;font-size:10px;cursor:pointer;display:none;">閉店</button>
   </div>
 </div>
@@ -190,10 +191,23 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
     </div>
   </div>
 
+  <!-- 注文確認 -->
+  <div id="o-confirm-view" style="display:none;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <button class="backbtn" onclick="oBackToGroups()">← 戻る</button>
+      <div class="stitle" style="margin:0;" id="o-confirm-gname">—</div>
+    </div>
+    <div id="o-confirm-meta" style="font-size:12px;color:#555;margin-bottom:12px;"></div>
+    <div id="o-confirm-orders" style="margin-bottom:12px;"></div>
+    <div id="o-confirm-total" style="font-size:18px;font-weight:700;color:#ff6b2b;text-align:right;margin-bottom:16px;"></div>
+    <button id="o-confirm-add-btn" onclick="oOpenGroupFromConfirm()" style="display:block;width:100%;padding:14px;background:#1a1a1a;border:1px solid #333;border-radius:14px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;">＋ 注文を追加する</button>
+    <button id="o-confirm-kaikei-btn" onclick="oOpenKaikeiFromConfirm()" style="display:block;width:100%;padding:14px;background:#ff6b2b;border:none;border-radius:14px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;">会計を締める ✓</button>
+  </div>
+
   <!-- 注文入力 -->
   <div id="o-order-view" style="display:none;">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-      <button class="backbtn" onclick="oBackToGroups()">← 戻る</button>
+      <button class="backbtn" onclick="oBackToConfirm()">← 戻る</button>
       <div class="stitle" style="margin:0;">注文入力</div>
     </div>
     <div class="ibar">
@@ -711,8 +725,44 @@ async function oCreateGroup(){
 }
 
 function oOpenGroup(id){
-  oCurGroupId=id;oCurOrders=[];
+  oCurGroupId=id;
   const g=groups.find(x=>x.id===id);
+  // 注文確認画面を表示
+  document.getElementById('o-confirm-gname').textContent=g.name;
+  document.getElementById('o-confirm-meta').textContent=`${g.pax}名　指名：${g.shimei.length?g.shimei.join('・'):'なし'}`;
+  // 注文一覧を表示
+  const merged={};
+  g.orders.forEach(o=>{
+    const label=o.who==='guest'?'お客様':o.staff||'';
+    const key=o.name+'__'+label;
+    if(!merged[key])merged[key]={name:o.name,price:o.price,qty:0,label};
+    merged[key].qty+=o.qty;
+  });
+  const rows=Object.values(merged);
+  const sub=g.orders.reduce((s,o)=>s+o.price*o.qty,0);
+  document.getElementById('o-confirm-orders').innerHTML=rows.length
+    ?rows.map(r=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1a1a;font-size:13px;"><span style="color:#ccc;">${r.name}×${r.qty}<span style="color:#555;font-size:11px;margin-left:6px;">${r.label}</span></span><span style="color:#fff;">¥${(r.price*r.qty).toLocaleString()}</span></div>`).join('')
+    :'<div style="color:#444;font-size:12px;text-align:center;padding:20px;">まだ注文なし</div>';
+  document.getElementById('o-confirm-total').textContent=`税込 ¥${Math.round(sub*1.1).toLocaleString()}`;
+  // 会計済みは追加ボタン非表示
+  document.getElementById('o-confirm-add-btn').style.display=g.closed?'none':'block';
+  document.getElementById('o-confirm-kaikei-btn').style.display=g.closed?'none':'block';
+  document.getElementById('o-groups-view').style.display='none';
+  document.getElementById('o-confirm-view').style.display='block';
+  document.getElementById('o-order-view').style.display='none';
+  document.getElementById('o-kaikei-view').style.display='none';
+}
+
+function oBackToConfirm(){
+  document.getElementById('o-groups-view').style.display='none';
+  document.getElementById('o-confirm-view').style.display='block';
+  document.getElementById('o-order-view').style.display='none';
+  document.getElementById('o-kaikei-view').style.display='none';
+}
+
+function oOpenGroupFromConfirm(){
+  const g=groups.find(x=>x.id===oCurGroupId);
+  oCurOrders=[];
   document.getElementById('o-cur-group').textContent=g.name;
   oUpdateTotal();
   oRenderShimeiDisplay(g);
@@ -725,13 +775,19 @@ function oOpenGroup(id){
   document.getElementById('o-custom-input-area').style.display='none';
   oSetWho('guest');
   document.getElementById('o-groups-view').style.display='none';
+  document.getElementById('o-confirm-view').style.display='none';
   document.getElementById('o-order-view').style.display='block';
   document.getElementById('o-kaikei-view').style.display='none';
+}
+
+function oOpenKaikeiFromConfirm(){
+  oOpenKaikei(oCurGroupId);
 }
 
 function oBackToGroups(){
   oCurOrders=[];
   document.getElementById('o-groups-view').style.display='block';
+  document.getElementById('o-confirm-view').style.display='none';
   document.getElementById('o-order-view').style.display='none';
   document.getElementById('o-kaikei-view').style.display='none';
   renderOGroups();

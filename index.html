@@ -178,6 +178,7 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
   <div style="display:flex;align-items:center;gap:8px;">
     <span id="hinfo" style="color:#ff6b2b;font-size:12px;font-weight:500;display:none;"></span>
     <button id="logout-btn" onclick="try{localStorage.removeItem('river_cur_staff');}catch(e){} goTo('sc-staff');curStaff='';curOrders=[];" style="display:none;background:transparent;border:none;color:#fff;font-size:11px;cursor:pointer;padding:4px 6px;">変更</button>
+    <button onclick="loadData().then(()=>renderGroups())" style="background:transparent;border:none;color:#555;font-size:16px;cursor:pointer;padding:4px 6px;">🔄</button>
     <button class="header-close-btn" id="header-close-btn" style="display:none;" onclick="openCloseModal()">閉店</button>
   </div>
 </div>
