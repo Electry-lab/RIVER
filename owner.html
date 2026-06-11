@@ -385,20 +385,30 @@ function calcBackForSession(sessionGroups){
 
     // ドリンクバック・シャンパンバック
     g.orders.forEach(o=>{
+      // 指名あり卓でguestのシャンパン→指名スタッフに自動付与
+      if(PCT_BACK_ITEMS.includes(o.name)&&isShimeiTable&&o.who==='guest'){
+        const champBack=Math.round(o.price*o.qty*0.1);
+        g.shimei.forEach(s=>{
+          if(NO_BACK_STAFF.includes(s))return;
+          if(!staffBack[s])staffBack[s]={drink:0,pct:0,shimei:0,total:0};
+          staffBack[s].pct+=Math.round(champBack/g.shimei.length);
+        });
+        return;
+      }
       if(o.who!=='self'&&o.who!=='other')return;
       const staffName=o.staff||'';
       if(!staffName)return;
-      if(NO_BACK_STAFF.includes(staffName))return; // バック対象外スタッフはスキップ
+      if(NO_BACK_STAFF.includes(staffName))return;
       if(!staffBack[staffName])staffBack[staffName]={drink:0,pct:0,shimei:0,total:0};
       if(DRINK_BACK_ITEMS.includes(o.name)){
-        // ドリンクバック：指名なし卓は全員、指名あり卓はother（他スタッフ）のみ
         if(!isShimeiTable||o.who==='other'){
           staffBack[staffName].drink+=o.qty*100;
         }
       } else if(PCT_BACK_ITEMS.includes(o.name)){
-        staffBack[staffName].pct+=Math.round(o.price*o.qty*0.1); // シャンパンバック：全卓
+        // 指名あり卓でself/other→個人優先、指名なし卓→入力スタッフ
+        staffBack[staffName].pct+=Math.round(o.price*o.qty*0.1);
       } else if(o.custom){
-        staffBack[staffName].pct+=Math.round(o.price*o.qty*0.1); // カスタム追加：自分・スタッフは10%バック
+        staffBack[staffName].pct+=Math.round(o.price*o.qty*0.1);
       }
     });
 
