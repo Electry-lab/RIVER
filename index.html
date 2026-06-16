@@ -1006,7 +1006,7 @@ function openKaikei(id){
   const discRow=document.getElementById('k-discount-row');
   const discFixedRow=document.getElementById('k-discount-fixed-row');
   const discInput=document.getElementById('k-discount-input');
-  const finalTotal=Math.max(0,Math.round((pretax-(g.discount||0))/10)*10);
+  const finalTotal=Math.max(0,Math.round((pretax-(g.discount||0))/100)*100);
 
   if(g.closed){
     closeBtn.style.display='none';
@@ -1066,7 +1066,7 @@ function updateKaikeiTotal(){
   const tax=Math.round(sub*0.1);
   const pretax=sub+tax;
   const discount=parseInt(document.getElementById('k-discount-input').value)||0;
-  const total=Math.max(0,Math.round((pretax-discount)/10)*10);
+  const total=Math.max(0,Math.round((pretax-discount)/100)*100);
   document.getElementById('k-total').textContent='¥'+total.toLocaleString();
   document.getElementById('pay-amount-disp').textContent='¥'+total.toLocaleString();
 }

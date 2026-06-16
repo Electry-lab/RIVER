@@ -517,15 +517,21 @@ function switchMainTab(tab){
 }
 
 /* ---- 売上タブ ---- */
+function calcGroupFinalAmount(g){
+  // 会計画面（oOpenKaikei）と同じ式で、そのグループの実際の会計金額を出す
+  const sub=g.orders.reduce((s,o)=>s+(o.price*o.qty),0);
+  const tax=Math.round(sub*0.1);
+  const pretax=sub+tax;
+  return Math.max(0,Math.round((pretax-(g.discount||0))/100)*100);
+}
 function calcSales(groupList){
   const closed=groupList.filter(g=>g.closed);
-  const sumSub=arr=>arr.reduce((s,g)=>s+g.orders.reduce((a,o)=>a+(o.price*o.qty),0),0);
-  const sumDiscount=arr=>arr.reduce((s,g)=>s+(g.discount||0),0);
   const cashG=closed.filter(g=>g.payMethod==='cash');
   const cardG=closed.filter(g=>g.payMethod==='card');
-  const total=Math.max(0,Math.round(sumSub(closed)*1.1)-sumDiscount(closed));
-  const cash=Math.max(0,Math.round(sumSub(cashG)*1.1)-sumDiscount(cashG));
-  const card=Math.max(0,Math.round(sumSub(cardG)*1.1)-sumDiscount(cardG));
+  const sumFinal=arr=>arr.reduce((s,g)=>s+calcGroupFinalAmount(g),0);
+  const total=sumFinal(closed);
+  const cash=sumFinal(cashG);
+  const card=sumFinal(cardG);
   return{total,cash,card,closedCount:closed.length,totalCount:groupList.length};
 }
 
@@ -952,7 +958,7 @@ function oOpenKaikei(id){
   const discRow=document.getElementById('o-k-discount-row');
   const discFixedRow=document.getElementById('o-k-discount-fixed-row');
   const discInput=document.getElementById('o-k-discount-input');
-  const finalTotal=Math.max(0,Math.round((pretax-(g.discount||0))/10)*10);
+  const finalTotal=Math.max(0,Math.round((pretax-(g.discount||0))/100)*100);
   document.getElementById('o-k-total').textContent='¥'+finalTotal.toLocaleString();
   const btn=document.getElementById('o-k-close-btn');
   const msg=document.getElementById('o-k-closed-msg');
@@ -1014,7 +1020,7 @@ function oUpdateKaikeiTotal(){
   const tax=Math.round(sub*0.1);
   const pretax=sub+tax;
   const discount=parseInt(document.getElementById('o-k-discount-input').value)||0;
-  const total=Math.max(0,Math.round((pretax-discount)/10)*10);
+  const total=Math.max(0,Math.round((pretax-discount)/100)*100);
   document.getElementById('o-k-total').textContent='¥'+total.toLocaleString();
   document.getElementById('o-pay-amount').textContent='¥'+total.toLocaleString();
 }
