@@ -161,7 +161,6 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
 .pay-badge{display:inline-block;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:500;margin-left:6px;vertical-align:middle;}
 .pay-badge.cash{background:#1a2a1a;color:#4caf50;}
 .pay-badge.card{background:#1a1f2a;color:#5b9cf6;}
-.pay-badge.unpaid{background:#2a1414;color:#ff8a80;}
 .hist-time{font-size:10px;color:#333;margin-top:2px;}
 
 /* ヘッダー閉店ボタン */
@@ -179,7 +178,7 @@ body{background:#050505;min-height:100vh;display:flex;justify-content:center;pad
   <div style="display:flex;align-items:center;gap:8px;">
     <span id="hinfo" style="color:#ff6b2b;font-size:12px;font-weight:500;display:none;"></span>
     <button id="logout-btn" onclick="try{localStorage.removeItem('river_cur_staff');}catch(e){} goTo('sc-staff');curStaff='';curOrders=[];" style="display:none;background:transparent;border:none;color:#fff;font-size:11px;cursor:pointer;padding:4px 6px;">変更</button>
-    <button onclick="const s=curSessionId;loadData().then(()=>{if(s)curSessionId=s;renderGroups();})" style="background:transparent;border:none;color:#555;font-size:16px;cursor:pointer;padding:4px 6px;">🔄</button>
+    <button onclick="loadData().then(()=>{updateSessionBadge();renderGroups();})" style="background:transparent;border:none;color:#555;font-size:16px;cursor:pointer;padding:4px 6px;">🔄</button>
     <button class="header-close-btn" id="header-close-btn" style="display:none;" onclick="openCloseModal()">閉店</button>
   </div>
 </div>
@@ -526,10 +525,10 @@ async function loadData(){
     const sData=await sbFetch('sessions?order=started_at.asc');
     if(sData)sessions=sData.map(s=>({id:s.id,startedAt:s.started_at,closedAt:s.closed_at,dateLabel:s.date_label}));
 
-    // 未閉店セッションがあれば自動で使う
+    // 未閉店セッションがあれば自動で使う（閉店済みのIDが残っている場合もnullにする）
     const openSession=sessions.find(s=>!s.closedAt);
     if(openSession)curSessionId=openSession.id;
-    else if(!sessions.find(s=>s.id===curSessionId))curSessionId=null;
+    else curSessionId=null;
 
     // グループと注文を取得
     const gData=await sbFetch('groups?order=id.asc&select=*,orders(*)');
@@ -539,7 +538,6 @@ async function loadData(){
         shimei:g.shimei||[],closed:g.closed,closedAt:g.closed_at,
         createdAt:g.created_at,
         payMethod:g.pay_method,deleteLogs:g.delete_logs||[],discount:g.discount||0,
-        isUnpaid:g.is_unpaid||false,unpaidCollected:g.unpaid_collected||false,
         orders:(g.orders||[]).map(o=>({name:o.name,price:o.price,qty:o.qty,who:o.who,staff:o.staff,custom:o.custom,ts:o.ts}))
       }));
     }
@@ -552,16 +550,39 @@ function saveLocalSession(){
 
 /* ---- 日付フォーマット ---- */
 function fmtDate(d){return`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;}
+
+// その日の何回目の開店かを数えて「6/16①」のようなラベルを作る（owner.htmlと同じ仕組み）
+const CIRCLE_NUMS=['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩'];
+function makeSessionLabel(now){
+  const md=`${now.getMonth()+1}/${now.getDate()}`;
+  const sameDay=sessions.filter(s=>{
+    const sd=new Date(s.startedAt);
+    return `${sd.getMonth()+1}/${sd.getDate()}`===md;
+  });
+  const idx=sameDay.length;
+  const num=CIRCLE_NUMS[idx]||`(${idx+1})`;
+  return md+num;
+}
+function sessionLabel(session){
+  if(!session)return '';
+  if(session.dateLabel&&/[①-⑩]|\(\d+\)/.test(session.dateLabel))return session.dateLabel;
+  return fmtDate(new Date(session.startedAt));
+}
+// セッションバッジ・閉店ボタンの表示を一元管理（自動ログイン時も必ずこれを呼ぶ）
+function updateSessionBadge(){
+  const session=sessions.find(s=>s.id===curSessionId);
+  const badge=document.getElementById('session-date-badge');
+  const closeBtn=document.getElementById('header-close-btn');
+  if(session&&!session.closedAt){
+    badge.textContent=sessionLabel(session);
+    closeBtn.style.display=CAN_CLOSE.includes(curStaff)?'block':'none';
+  } else {
+    badge.textContent='';
+    closeBtn.style.display='none';
+  }
+}
 function fmtDateJP(d){return`${d.getMonth()+1}月${d.getDate()}日（${DAYS[d.getDay()]}）`;}
 function fmtTime(d){return`${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;}
-
-// 1グループの最終お会計金額（税込・サービス割引適用後・100円単位丸め）
-function groupFinalTotal(g){
-  const sub=g.orders.reduce((s,o)=>s+(o.price*o.qty),0);
-  const tax=Math.round(sub*0.1);
-  const pretax=sub+tax;
-  return Math.max(0,Math.round((pretax-(g.discount||0))/100)*100);
-}
 
 /* ---- 営業セッション ---- */
 function initOpenScreen(){
@@ -580,11 +601,12 @@ function initOpenScreen(){
 async function startSession(){
   const now=new Date();
   curSessionId='session_'+now.getTime();
-  const session={id:curSessionId,startedAt:now.toISOString(),closedAt:null,dateLabel:fmtDate(now)};
+  const label=makeSessionLabel(now);
+  const session={id:curSessionId,startedAt:now.toISOString(),closedAt:null,dateLabel:label};
   sessions.push(session);
   saveLocalSession();
   await insertSession(session);
-  document.getElementById('session-date-badge').textContent=fmtDateJP(now);
+  document.getElementById('session-date-badge').textContent=label;
   document.getElementById('header-close-btn').style.display='none';
   goTo('sc-staff');
 }
@@ -599,7 +621,7 @@ function openCloseModal(){
 
   const sub=document.getElementById('close-modal-sub');
   if(unclosed.length>0){
-    sub.innerHTML=`<span style="color:#ff6b2b;">${unclosed.length}件</span>未会計のグループがあります。<br>このまま閉店しますか？`;
+    sub.innerHTML=`<span style="color:#ff6b2b;">${unclosed.length}件</span>未会計のグループがあります。<br><span style="font-size:11px;color:#888;">${unclosed.map(g=>g.name).join('、')}</span><br>このまま閉店しますか？`;
   } else {
     sub.innerHTML='本日の営業を終了します。';
   }
@@ -613,6 +635,12 @@ function openCloseModal(){
 }
 
 async function confirmClose(){
+  const sessionGroupsCheck=groups.filter(g=>g.sessionId===curSessionId);
+  const unclosedCheck=sessionGroupsCheck.filter(g=>!g.closed);
+  if(unclosedCheck.length>0){
+    const ok=confirm(`未会計が${unclosedCheck.length}組あります（${unclosedCheck.map(g=>g.name).join('、')}）。\n本当に閉店しますか？`);
+    if(!ok)return;
+  }
   document.getElementById('close-modal').classList.remove('show');
   const now=new Date();
   const session=sessions.find(s=>s.id===curSessionId);
@@ -717,7 +745,7 @@ function selStaff(name){
   const all=STAFF.includes(name)?STAFF:[...STAFF,name];
   document.getElementById('shimei-sel').innerHTML=ALL_STAFF.map(s=>`<div class="msbtn" onclick="this.classList.toggle('sel')">${s}</div>`).join('');
   document.getElementById('other-staff-list').innerHTML=ALL_STAFF.filter(s=>s!==name).map(s=>`<div class="msbtn" onclick="selOther(this,'${s}')">${s}</div>`).join('');
-  document.getElementById('header-close-btn').style.display=CAN_CLOSE.includes(name)?'block':'none';
+  updateSessionBadge();
 }
 
 /* ---- Groups ---- */
@@ -746,19 +774,18 @@ function renderGroups(){
   } else {
     const sorted=[...list].sort((a,b)=>new Date(b.closedAt)-new Date(a.closedAt));
     el.innerHTML=sorted.map(g=>{
-      const total=groupFinalTotal(g);
-      const payLabel=g.isUnpaid?(g.unpaidCollected?'回収済':'未回収'):(g.payMethod==='cash'?'現金':'カード');
-      const payClass=g.isUnpaid?(g.unpaidCollected?'cash':'unpaid'):(g.payMethod==='cash'?'cash':'card');
+      const sub=g.orders.reduce((s,o)=>s+(o.price*o.qty),0);
+      const total=Math.round(sub*1.1);
+      const payLabel=g.payMethod==='cash'?'現金':'カード';
+      const payClass=g.payMethod==='cash'?'cash':'card';
       const dt=new Date(g.closedAt);
       const timeStr=fmtTime(dt);
       const createdStr=g.createdAt?fmtTime(new Date(g.createdAt)):'';
-      const unpaidNote=g.isUnpaid&&!g.unpaidCollected?'<div style="font-size:10px;color:#ff8a80;margin-top:3px;">⚠️ 未回収（オーナー報告済・対応不要）</div>':'';
       return `<div class="gcard" onclick="openKaikei(${g.id})" style="opacity:0.75;">
         <div style="flex:1;">
           <div class="gname">${g.name}<span class="pay-badge ${payClass}">${payLabel}</span></div>
           <div class="gmeta">${g.pax}名　指名：${g.shimei.length?g.shimei.join('・'):'なし'}</div>
           <div class="hist-time">${createdStr?createdStr+' 入店 〜 ':''}${timeStr} 会計済</div>
-          ${unpaidNote}
         </div>
         <div class="gprice"><div class="gprice-num">¥${total.toLocaleString()}</div><div class="gprice-sub">税込</div></div>
       </div>`;
@@ -771,8 +798,9 @@ function toggleAddGroup(){
     const activeSession=sessions.find(s=>!s.closedAt);
     const btnArea=document.getElementById('session-btn-area');
     if(activeSession){
+      const lbl=sessionLabel(activeSession);
       btnArea.innerHTML=`
-        <button onclick="continueSessionFromModal('${activeSession.id}')" style="display:block;width:100%;padding:14px;background:#ff6b2b;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;">今日の営業を継続する 🍸</button>
+        <button onclick="continueSessionFromModal('${activeSession.id}')" style="display:block;width:100%;padding:14px;background:#ff6b2b;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;">${lbl}を継続する 🍸</button>
         <button onclick="startSessionFromModal()" style="display:block;width:100%;padding:12px;background:transparent;border:1px solid #555;border-radius:12px;color:#888;font-size:13px;cursor:pointer;margin-bottom:10px;">新しく営業を開始する</button>
         <button onclick="document.getElementById('session-confirm-modal').style.display='none'" style="display:block;width:100%;padding:12px;background:transparent;border:1px solid #333;border-radius:12px;color:#555;font-size:13px;cursor:pointer;">キャンセル</button>`;
     } else {
@@ -791,12 +819,12 @@ async function startSessionFromModal(){
   document.getElementById('session-confirm-modal').style.display='none';
   const now=new Date();
   curSessionId='session_'+now.getTime();
-  const session={id:curSessionId,startedAt:now.toISOString(),closedAt:null,dateLabel:fmtDate(now)};
+  const label=makeSessionLabel(now);
+  const session={id:curSessionId,startedAt:now.toISOString(),closedAt:null,dateLabel:label};
   sessions.push(session);
   saveLocalSession();
   await insertSession(session);
-  document.getElementById('session-date-badge').textContent=fmtDateJP(now);
-  document.getElementById('header-close-btn').style.display='block';
+  updateSessionBadge();
   document.getElementById('addgroup-form').style.display='block';
 }
 
@@ -804,11 +832,7 @@ async function continueSessionFromModal(sessionId){
   document.getElementById('session-confirm-modal').style.display='none';
   curSessionId=sessionId;
   saveLocalSession();
-  const session=sessions.find(s=>s.id===curSessionId);
-  if(session){
-    document.getElementById('session-date-badge').textContent=fmtDateJP(new Date(session.startedAt));
-  }
-  document.getElementById('header-close-btn').style.display='block';
+  updateSessionBadge();
   document.getElementById('addgroup-form').style.display='block';
 }
 
@@ -1159,6 +1183,7 @@ async function init(){
     document.getElementById('hinfo').textContent=savedStaff;
     document.getElementById('hinfo').style.display='inline';
     document.getElementById('logout-btn').style.display='inline';
+    updateSessionBadge();
     goTo('sc-groups');
     renderGroups();
   } else {
@@ -1174,6 +1199,7 @@ setInterval(async()=>{
   try{
     await loadStaff();
     await loadData();
+    updateSessionBadge();
     if(document.getElementById('sc-groups')?.classList.contains('active')){
       renderGroups();
     }
